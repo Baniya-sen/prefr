@@ -2,9 +2,8 @@ id: privacy_first
 title: Prefer privacy-preserving solutions
 body: 'Prefer solutions that minimize data exposure, limit external data sharing,
   and keep control of data within trusted boundaries, unless broader data access is
-  clearly required for functionality.
-
-  '
+  clearly required for functionality.'
+primary_domain: security
 applies_to:
 - software
 - infrastructure
@@ -19,11 +18,8 @@ evidence:
   negative: 0
   representative_observations: []
   summary: 'Initial policy based on preference for maintaining control over data and
-    reducing unnecessary external exposure.
-
-    '
+    reducing unnecessary external exposure.'
 created_by: manual
 created_at: 2026-08-10
 updated_at: 2026-08-10
 last_reviewed: 2026-08-10
-primary_domain: security

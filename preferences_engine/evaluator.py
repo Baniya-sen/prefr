@@ -6,7 +6,7 @@ from typing import Any
 
 import yaml  # pip install pyyaml
 
-from config import POLICIES
+from preferences_engine.config import POLICIES
 
 MAX_PREFERENCES = 6
 MIN_SCORE = 100
@@ -95,6 +95,7 @@ class Evaluator:
 
             policy_copy = dict(policy)
             policy_copy["weight"] = weight
+            policy_copy["score"] = score
 
             selected.append(policy_copy)
 

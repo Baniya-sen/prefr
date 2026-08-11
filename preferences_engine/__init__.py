@@ -1,7 +1,7 @@
 """Preferences Engine public API."""
 
-from .classifier import startup, shutdown, classify
-from .evaluator import evaluator
+from preferences_engine.classifier import startup, shutdown, classify
+from preferences_engine.evaluator import evaluator
 
 __all__ = [
     "startup",

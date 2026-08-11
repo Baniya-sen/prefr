@@ -1,9 +1,8 @@
 id: low_maintenance
 title: Prefer low-maintenance solutions
 body: 'Prefer solutions that require minimal ongoing setup, monitoring, and manual
-  intervention, unless higher maintenance provides clear benefits.
-
-  '
+  intervention, unless higher maintenance provides clear benefits.'
+primary_domain: software
 applies_to:
 - software
 - infrastructure
@@ -16,11 +15,8 @@ evidence:
   positive: 0
   negative: 0
   representative_observations: []
-  summary: 'Initial policy based on preference for reducing operational overhead.
-
-    '
+  summary: 'Initial policy based on preference for reducing operational overhead.'
 created_by: manual
 created_at: 2026-08-10
 updated_at: 2026-08-10
 last_reviewed: 2026-08-10
-primary_domain: software
