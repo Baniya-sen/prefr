@@ -13,7 +13,7 @@ from pathlib import Path
 
 import requests
 
-from .config import (
+from preferences_engine.config import (
     CACHE_PROMPT,
     LLAMA_SERVER,
     LOG_FILE,
@@ -28,7 +28,7 @@ from .config import (
     TOP_K,
     TOP_P,
 )
-from .prompt import CLASSIFIER_PROMPT
+from preferences_engine.prompt import CLASSIFIER_PROMPT
 
 
 class PreferencesEngine:

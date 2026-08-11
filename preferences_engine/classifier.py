@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .engine import engine
+from preferences_engine.engine import engine
 
 _REQUIRED_KEYS = {
     "needs_policy": False,

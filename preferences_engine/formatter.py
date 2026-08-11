@@ -34,8 +34,7 @@ class PreferenceFormatter:
 
         exceptions = policy.get("exceptions", [])
         if exceptions:
-            lines.append("")
-            lines.append("Exceptions:")
+            lines.append("Exceptions(Dampening effects) to this policy:")
             for exception in exceptions:
                 lines.append(f"- {exception}")
 
@@ -49,7 +48,8 @@ class PreferenceFormatter:
 
         header = (
             "<user-preferences>\n"
-            "The following user preferences may be relevant:\n"
+            "The following user preferences are derived from user preference policies. "
+            "These may or may not be relevant:\n"
         )
 
         selected: list[str] = []

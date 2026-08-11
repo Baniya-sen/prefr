@@ -44,7 +44,8 @@ ROOT = Path(__file__).parent
 
 POLICIES = ROOT / "policies"
 RUNTIME_DIR = ROOT / "runtime"
+SCHEMAS_DIR = ROOT / "schemas"
 
+SCHEMA = SCHEMAS_DIR / "CLASSIFY_SCHEMA.json"
 PROMPT_HASH = RUNTIME_DIR / "prompt.sha256"
-SCHEMA = RUNTIME_DIR / "schema.json"
 LOG_FILE = RUNTIME_DIR / "preferences_engine.log"
