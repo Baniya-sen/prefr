@@ -1,0 +1,30 @@
+id: local_first
+title: Prefer local-first solutions
+body: 'Prefer solutions that run locally on user-controlled machines or infrastructure.
+  Avoid cloud or external dependencies unless they provide clear, necessary advantages
+  such as scalability, collaboration, or operational simplicity.
+
+  '
+applies_to:
+- software
+- infrastructure
+- development
+- automation
+priority: 90
+confidence: 0.7
+related:
+- low_cost
+- privacy_first
+evidence:
+  positive: 0
+  negative: 0
+  representative_observations: []
+  summary: Initial policy based on consistent preference for local tools, self-hosting,
+    and minimizing reliance on external services.
+created_by: manual
+created_at: 2026-08-10
+updated_at: 2026-08-10
+last_reviewed: 2026-08-10
+exceptions:
+- company_projects
+primary_domain: software
