@@ -13,12 +13,7 @@ def run_pipeline(query: str) -> None:
     print("-" * 60)
 
     # Step 1: Classify
-    classification = {
-                "needs_policy": True,
-                "classifier_confidence": 0.5,
-                "domains": ["software"],
-                "interaction_mode": "recommend",
-            }
+    classification = classify(query)
     print(f"Classification: {classification}")
 
     if not classification.get("needs_policy", False):
