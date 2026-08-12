@@ -9,3 +9,4 @@ SPEC.md
 *.log
 *.sha256
 AGENTS.md
+.env
