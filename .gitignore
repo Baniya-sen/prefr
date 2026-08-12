@@ -1,1 +1,11 @@
 .idea
+# Local dev
+engine/
+__pycache__/
+*.pyc
+test_pipeline.py
+PROGRESS.md
+SPEC.md
+*.log
+*.sha256
+AGENTS.md
