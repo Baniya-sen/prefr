@@ -296,4 +296,183 @@ config = load_config()
 
 ---
 
-*Source-verified against Hermes Agent v0.19.0 codebase at `~/.hermes/hermes-agent/`.*
+## 7. Temperature Handling
+
+Hermes does **NOT** send a default temperature. It's omitted unless explicitly set.
+
+### Logic (`transports/chat_completions.py:541-550`)
+
+```python
+# Profile path:
+if profile.fixed_temperature is OMIT_TEMPERATURE:
+    pass  # Don't include temperature at all
+elif profile.fixed_temperature is not None:
+    api_kwargs["temperature"] = profile.fixed_temperature
+else:
+    temp = params.get("temperature")
+    if temp is not None:
+        api_kwargs["temperature"] = temp
+```
+
+**Default:** Temperature not sent — provider uses server-side default.
+
+**Model-specific overrides:**
+- Kimi/Moonshot → `OMIT_TEMPERATURE` (server-managed, never sent)
+- Opus 4.7+ → temperature stripped (rejects non-default values)
+- Other models → only sent if explicitly configured
+
+---
+
+## 8. Reasoning (Thinking/CoT) Control
+
+Per-provider wire formats — **not uniform across providers**.
+
+### OpenRouter
+
+Sent as `extra_body.reasoning` (Python SDK) or top-level `reasoning` (TypeScript/REST):
+
+```python
+# Python SDK — MUST be in extra_body
+extra_body={"reasoning": {"enabled": False}}
+
+# To disable: effort "none"
+extra_body={"reasoning": {"effort": "none"}}
+
+# To set level
+extra_body={"reasoning": {"effort": "high"}}  # low|medium|high|xhigh|max
+```
+
+**Python SDK constraint:** OpenAI SDK 2.24.0 has no `**kwargs` on `create()`. Passing `reasoning` as top-level kwarg raises `TypeError`. Must go in `extra_body`.
+
+### OpenCode Go (per-model)
+
+| Model | Disable | Set Effort |
+|---|---|---|
+| GLM-5.2 | Don't send `reasoning_effort` | `reasoning_effort: "high"` or `"max"` (top-level) |
+| Kimi K2 | `extra_body.thinking.type: "disabled"` | `reasoning_effort: "low"/"medium"/"high"` (top-level) |
+| DeepSeek thinking (v4-pro, reasoner) | `extra_body.thinking.type: "disabled"` | `reasoning_effort: "low"/"medium"/"high"` (top-level) |
+| Other (deepseek-v4-flash, glm-5, etc.) | No API control | No API control |
+
+Source: `plugins/model-providers/opencode-zen/__init__.py:40-127`
+
+### Kimi/Moonshot (direct)
+
+```python
+extra_body={"thinking": {"type": "disabled"}}  # or "enabled"
+# mutually exclusive with reasoning_effort — never both
+```
+
+### Anthropic (native Messages API)
+
+Reasoning is controlled via `thinking` parameter in the Messages API wire format, not via `extra_body`. Handled by `agent/anthropic_adapter.py`.
+
+### Summary
+
+| Provider | Disable Reasoning | Wire Location |
+|---|---|---|
+| OpenRouter | `reasoning.effort: "none"` or `reasoning.enabled: false` | `extra_body` (Python) |
+| OpenCode Go (DeepSeek/Kimi) | `thinking.type: "disabled"` | `extra_body` |
+| OpenCode Go (GLM-5.2) | Omit `reasoning_effort` | top-level |
+| Kimi direct | `thinking.type: "disabled"` | `extra_body` |
+| LM Studio | Omit `reasoning_effort` | top-level |
+
+---
+
+## 9. `ctx.llm.complete_structured()` Interface
+
+Different from raw `client.chat.completions.create()` — not a drop-in replacement.
+
+### Parameters
+
+```python
+result = ctx.llm.complete_structured(
+    instructions="Classify this memory",     # replaces system message
+    input=[{"type": "text", "text": query}], # replaces user message
+    json_schema={...},                        # JSON Schema for validation
+    temperature=0.0,
+    max_tokens=128,
+    model="deepseek-v4-flash",               # optional — override model
+    provider="opencode-go",                  # optional — override provider
+    purpose="memory.classifier",             # logging tag only
+)
+# result.parsed = validated Python dict
+# result.text = raw JSON string
+```
+
+### What You Lose vs Raw SDK
+
+- `extra_body` — no way to pass `reasoning`, `session_id`, or provider-specific fields
+- Direct provider/model control — resolved from config unless overridden
+- `response_format` — handled differently via `json_schema` param
+- Fine-grained control over request shape
+
+### When to Use
+
+- Quick classification/summarization inside a plugin
+- When you don't need provider-specific knobs
+- When Hermes's auth/retry/fallback is useful
+
+### When NOT to Use
+
+- When you need `extra_body` (reasoning control, session_id)
+- When you need direct provider/model selection
+- When you need `response_format` with custom JSON Schema
+
+---
+
+## 10. Custom Plugin Config
+
+`load_config()` reads the full YAML — no schema validation, no rejection of unknown keys.
+
+### config.yaml
+
+```yaml
+plugins:
+  entries:
+    my-classifier:
+      llm:
+        allow_provider_override: true
+        allow_model_override: true
+      # Custom config — Hermes ignores it, your plugin reads it
+      classifier:
+        sp_length_min: 1024
+        default_temperature: 0.1
+        cache_warmup_query: ""
+```
+
+### Plugin Code
+
+```python
+from hermes_cli.config import load_config
+
+config = load_config()
+my_cfg = config.get("plugins", {}). get("entries", {}).get("my-classifier", {})
+classifier_cfg = my_cfg.get("classifier", {})
+
+temp = classifier_cfg.get("default_temperature", 0.1)
+```
+
+Hermes only reads the keys it knows (`llm.allow_*`, etc.). Everything else is invisible to it — your plugin reads it directly via `load_config()`.
+
+---
+
+## 11. `extra_body` vs Top-Level Parameters
+
+**Python SDK (OpenAI 2.24.0):** No `**kwargs` on `create()`. Unknown parameters raise `TypeError`.
+
+| Parameter | Where to Put It | Why |
+|---|---|---|
+| `reasoning` | `extra_body` | Not a recognized SDK parameter |
+| `thinking` | `extra_body` | Not a recognized SDK parameter |
+| `session_id` | `extra_body` | Not a recognized SDK parameter |
+| `response_format` | Top-level | Recognized SDK parameter |
+| `temperature` | Top-level | Recognized SDK parameter |
+| `max_tokens` | Top-level | Recognized SDK parameter |
+| `model` | Top-level | Recognized SDK parameter |
+| `messages` | Top-level | Recognized SDK parameter |
+
+OpenRouter forwards all `extra_body` fields to the upstream provider. OpenCode Go (vLLM) also accepts them.
+
+---
+
+*Source-verified against Hermes Agent v0.19.0 codebase at `~/.hermes/hermes-agent/` and OpenRouter official docs.*
