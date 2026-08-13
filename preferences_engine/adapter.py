@@ -275,7 +275,9 @@ class PluginLlm:
         )
         extra = self._build_extra_body(eff_provider)
         extra["response_format"] = self._json_response_format(
-            json_mode=json_mode, json_schema=json_schema
+            json_mode=json_mode,
+            json_schema=json_schema,
+            provider=eff_provider,
         )
 
         kwargs: Dict[str, Any] = {
@@ -407,9 +409,15 @@ class PluginLlm:
 
     @staticmethod
     def _json_response_format(
-        *, json_mode: bool, json_schema: Optional[Any]
+        *, json_mode: bool, json_schema: Optional[Any], provider: str
     ) -> Optional[Dict[str, Any]]:
+        # opencode-go (DeepSeek) does not support structured-output
+        # ``json_schema`` mode — it rejects it with a 400. Fall back to
+        # ``json_object`` there; the schema text is already in the user
+        # message so the model still produces the right shape.
         if json_schema is not None:
+            if provider == "opencode-go":
+                return {"type": "json_object"}
             return {
                 "type": "json_schema",
                 "json_schema": {

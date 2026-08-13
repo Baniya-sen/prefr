@@ -84,6 +84,7 @@ class PreferencesEngine:
             self.start()
 
         return ctx.llm.complete_structured(
+            instructions="Classify the user message below.",
             schema_name=SCHEMA_NAME,
             system_prompt=self._classifier_prompt,
             json_schema=self._json_schema,
