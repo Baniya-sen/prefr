@@ -1219,3 +1219,7 @@ requests.exceptions.ConnectionError: HTTPConnectionPool(host='127.0.0.1', port=8
 2026-08-13 00:29:04,325 INFO HTTP Request: POST https://opencode.ai/zen/go/v1/chat/completions "HTTP/1.1 200 OK"
 2026-08-13 00:29:14,309 INFO HTTP Request: POST https://opencode.ai/zen/go/v1/chat/completions "HTTP/1.1 200 OK"
 2026-08-13 00:29:32,161 INFO HTTP Request: POST https://opencode.ai/zen/go/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-13 23:51:48,126 INFO Preferences Engine ready
+2026-08-13 23:52:31,368 INFO Preferences Engine ready
+2026-08-13 23:52:55,093 INFO Preferences Engine ready
+2026-08-13 23:53:51,977 INFO Preferences Engine ready

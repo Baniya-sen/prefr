@@ -72,7 +72,4 @@ class PreferenceFormatter:
         if not selected:
             return ""
 
-        return header + "\n" + "\n\n".join(selected) + "\n</user-preferences>"
-
-
-formatter = PreferenceFormatter()
+        return str(header + "\n" + "\n\n".join(selected) + "\n</user-preferences>")

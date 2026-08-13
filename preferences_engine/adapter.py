@@ -19,11 +19,18 @@ import base64
 import json
 import os
 import re
+import sys
+
+from pathlib import Path
+from dotenv import load_dotenv
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Union
 
 from openai import OpenAI
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # ---------------------------------------------------------------------------
 # Data classes — mirror agent/plugin_llm.py:77-155
@@ -102,6 +109,8 @@ PROVIDERS = {
 
 def _resolve_provider(provider: Optional[str]) -> str:
     """Pick provider: explicit arg wins, else first key present in env."""
+    load_dotenv()
+
     if provider:
         return provider
     for name, cfg in PROVIDERS.items():
@@ -146,6 +155,8 @@ class PluginLlm:
         return provider or self._provider or _resolve_provider(None)
 
     def _resolve_model(self, provider: str, model: Optional[str]) -> str:
+        load_dotenv()
+
         if model or self._default_model:
             return model or self._default_model
         cfg = PROVIDERS[provider]
@@ -434,11 +445,10 @@ class PluginLlm:
 
 
 class PluginContext:
-    """Local stand-in for the Hermes PluginContext handed to ``register(ctx)``."""
-
     def __init__(self, *, plugin_id: str = "prefr") -> None:
         self._plugin_id = plugin_id
         self._llm: Optional[PluginLlm] = None
+        self._hooks: Dict[str, List[Any]] = {}
 
     @property
     def llm(self) -> PluginLlm:
@@ -446,11 +456,50 @@ class PluginContext:
             self._llm = PluginLlm(plugin_id=self._plugin_id)
         return self._llm
 
+    def register_hook(self, name: str, callback: Any) -> None:
+        self._hooks.setdefault(name, []).append(callback)
+
+    def run_hook(self, name: str, **kwargs: Any) -> Any:
+        results = []
+
+        for callback in self._hooks.get(name, []):
+            result = callback(**kwargs)
+
+            if result is not None:
+                results.append(result)
+
+        return results[-1] if results else None
+
 
 def make_ctx(*, plugin_id: str = "prefr") -> PluginContext:
-    """Return a local ``ctx`` exposing the Hermes ``ctx.llm`` surface.
-
-    The classifier takes this ``ctx`` exactly as it would take Hermes' real
-    ``ctx`` — it never needs to know which one it got.
-    """
     return PluginContext(plugin_id=plugin_id)
+
+
+def main() -> None:
+    from prefr import register
+
+    ctx = make_ctx()
+
+    register(ctx)
+
+    print("Prefr Hermes adapter ready.")
+    print("Type /exit to quit.\n")
+
+    while True:
+        user_message = input("User: ")
+
+        if user_message == "/exit":
+            break
+
+        result = ctx.run_hook(
+            "pre_llm_call",
+            user_message=user_message,
+        )
+
+        print("\nPrefr:")
+        print(result)
+        print()
+
+
+if __name__ == "__main__":
+    main()

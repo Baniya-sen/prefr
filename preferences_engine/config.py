@@ -11,8 +11,6 @@ from pathlib import Path
 # llama-server
 # ------------------------------------------------------------------
 
-LLAMA_SERVER = "http://127.0.0.1:8080"
-
 # Single persistent classifier slot
 SLOT_ID = 0
 
@@ -28,12 +26,14 @@ TOP_K = 1
 TOP_P = 0.9
 MIN_P = 0.0
 REPEAT_PENALTY = 1.05
+SCHEMA_NAME = "Prefr Preference Engine"
+PURPOSE = "prefr.classifier"
 
 # ------------------------------------------------------------------
 # Runtime
 # ------------------------------------------------------------------
 
-REQUEST_TIMEOUT = 30
+REQUEST_TIMEOUT = 5
 CACHE_PROMPT = True
 
 # ------------------------------------------------------------------

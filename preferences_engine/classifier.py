@@ -1,16 +1,17 @@
 """
-classifier.py — Pure classification.
+classifier.py — Pure classification output normalization.
 
-Takes a structured LLM result and returns a valid classification dict.
+Takes an LLM result and returns a clean, schema-conformant
+classification dict.
 
-No LLM call, no ctx, no engine, no llama. The LLM orchestration lives in
-``llm_completions.py``; this module only turns its output into a clean,
-schema-conformant classification.
+No LLM calls, no ctx, no engine, no provider logic.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
+
 
 _DEFAULT = {
     "needs_policy": False,
@@ -20,38 +21,92 @@ _DEFAULT = {
 }
 
 
-def _normalize(parsed: dict[str, Any]) -> dict[str, Any]:
-    """Ensure a parsed dict always conforms to the classification schema."""
-    out = dict(_DEFAULT)
-
-    for key in _DEFAULT:
-        if key in parsed:
-            out[key] = parsed[key]
-
-    if not isinstance(out["domains"], list):
-        out["domains"] = []
-
-    try:
-        out["classifier_confidence"] = float(out["classifier_confidence"])
-    except Exception:
-        out["classifier_confidence"] = 0.0
-
-    out["needs_policy"] = bool(out["needs_policy"])
-    out["interaction_mode"] = str(out["interaction_mode"])
-
-    return out
-
-
 def classify(result: Any) -> dict[str, Any]:
-    """Classify a structured LLM result into a clean dict.
-
-    ``result`` is the object returned by ``ctx.llm.complete_structured()``
-    (it has a ``.parsed`` attribute). If ``.parsed`` is missing or not a
-    dict, the safe default classification is returned.
-    """
     parsed = getattr(result, "parsed", None)
 
-    if not isinstance(parsed, dict):
-        return dict(_DEFAULT)
+    if isinstance(parsed, dict):
+        return _normalize(parsed)
 
-    return _normalize(parsed)
+    text = getattr(result, "text", None)
+
+    if isinstance(text, str):
+        parsed = _parse_json(text)
+
+        if isinstance(parsed, dict):
+            return _normalize(parsed)
+
+    return dict(_DEFAULT)
+
+
+def _parse_json(text: str) -> Any:
+    text = text.strip()
+
+    if not text:
+        return None
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    if text.startswith("```") and text.endswith("```"):
+        lines = text.splitlines()
+
+        if len(lines) >= 3:
+            body = lines[1:-1]
+
+            if lines[0].strip().lower() in {"```", "```json"}:
+                try:
+                    return json.loads("\n".join(body).strip())
+                except json.JSONDecodeError:
+                    pass
+
+    return None
+
+
+def _normalize(parsed: dict[str, Any]) -> dict[str, Any]:
+    result = dict(_DEFAULT)
+
+    if "needs_policy" in parsed:
+        result["needs_policy"] = _to_bool(
+            parsed["needs_policy"]
+        )
+
+    if "classifier_confidence" in parsed:
+        result["classifier_confidence"] = _to_confidence(
+            parsed["classifier_confidence"]
+        )
+
+    if isinstance(parsed.get("domains"), list):
+        result["domains"] = [
+            str(domain)
+            for domain in parsed["domains"]
+        ]
+
+    if "interaction_mode" in parsed:
+        result["interaction_mode"] = str(
+            parsed["interaction_mode"]
+        )
+
+    return result
+
+
+def _to_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        return value.strip().lower() in {
+            "true",
+            "1",
+            "yes",
+        }
+
+    return bool(value)
+
+
+def _to_confidence(value: Any) -> float:
+    try:
+        return max(0.0, min(1.0, float(value)))
+    except (TypeError, ValueError):
+        return 0.0

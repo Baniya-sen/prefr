@@ -1,115 +1,189 @@
-#!/usr/bin/env python3
-"""
-llm_completions.py — Prefr LLM orchestration (the future Hermes plugin).
-
-Flow:  Hermes ctx + message  ->  ctx.llm.complete_structured()  ->  raw result
-       ->  classifier.classify()  ->  classification dict.
-
-``register(ctx)`` is the Hermes entry point (Hermes calls it with the real
-ctx, ignores its return). ``classify(ctx, message)`` is the orchestration
-function — it knows only ``ctx.llm`` and delegates the classification logic
-to ``classifier.py``.
-
-Run it standalone (``python llm_completions.py "message"``) and a fallback
-OpenAI-backed ctx is built inside ``main()`` via the adapter. The plugin
-path (register/classify) never imports the adapter or the OpenAI SDK.
-"""
-
-from __future__ import annotations
-
+import os
 import json
-import sys
+import asyncio
 from pathlib import Path
-from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+import tiktoken
+from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
-from preferences_engine import classifier
 from preferences_engine.prompt import CLASSIFIER_PROMPT
 
-ROOT = Path(__file__).resolve().parent.parent
-SCHEMA_PATH = ROOT / "schemas" / "CLASSIFY_SCHEMA.json"
+
+def load_schema() -> dict:
+    path = Path(__file__).resolve().parent.parent / "schemas" / "CLASSIFY_SCHEMA.json"
+
+    with path.open("r", encoding="utf-8") as file:
+        return json.load(file)
 
 
-def load_schema() -> dict[str, Any]:
-    with SCHEMA_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f)
+def load_config() -> tuple[str, str, str, str, bool]:
+    load_dotenv()
 
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    opencode_key = os.getenv("OPENCODE_GO_API_KEY")
 
-def classify(
-    ctx: Any,
-    message: str,
-    schema: dict[str, Any] | None = None,
-    *,
-    provider: str | None = None,
-    model: str | None = None,
-) -> dict[str, Any]:
-    """Orchestrate classification: LLM call, then pure classification."""
-    schema = schema or load_schema()
+    if openrouter_key:
+        return (
+            "https://openrouter.ai/api/v1",
+            openrouter_key,
+            os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash-lite"),
+            "classifier-session",
+            True,
+        )
 
-    result = ctx.llm.complete_structured(
-        instructions=CLASSIFIER_PROMPT,
-        input=[{"type": "text", "text": message}],
-        json_schema=schema,
-        temperature=0.1,
-        max_tokens=64,
-        purpose="prefr.classifier",
-        provider=provider,
-        model=model,
+    if opencode_key:
+        return (
+            "https://opencode.ai/zen/go/v1",
+            opencode_key,
+            os.getenv("OPENCODE_GO_MODEL", "deepseek-v4-flash"),
+            "classifier-session",
+            False,
+        )
+
+    raise RuntimeError(
+        "Set OPENROUTER_API_KEY or OPENCODE_GO_API_KEY"
     )
 
-    return classifier.classify(result)
+
+def create_client(api_key: str, base_url: str) -> AsyncOpenAI:
+    return AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        max_retries=0,
+    )
 
 
-def pre_llm_call(ctx: Any, user_message: str, schema: dict[str, Any]) -> dict[str, Any]:
-    return classify(ctx, user_message, schema)
+def build_request(
+        base: str,
+        model: str,
+        message: str,
+        schema: dict,
+        session_id: str,
+        use_session_id: bool,
+) -> dict:
+    request = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": CLASSIFIER_PROMPT},
+            {"role": "user", "content": message},
+        ],
+        "temperature": 0.1,
+    }
+
+    extra_body = {}
+
+    if "openrouter.ai" in base:
+        request["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "classifier",
+                "strict": True,
+                "schema": schema,
+            },
+        }
+        extra_body["reasoning"] = {
+            "effort": "none",
+        }
+
+        if use_session_id:
+            extra_body["session_id"] = session_id
+
+    else:
+        extra_body["thinking"] = {
+            "type": "disabled",
+        }
+
+    if extra_body:
+        request["extra_body"] = extra_body
+
+    return request
 
 
-def register(ctx: Any) -> None:
-    """Hermes entry point: bind the real ctx and hook into pre_llm_call."""
+def print_usage(response) -> None:
+    if not response.usage:
+        return
+
+    details = getattr(response.usage, "prompt_tokens_details", None)
+    cached = getattr(details, "cached_tokens", 0) if details else 0
+    written = getattr(details, "cache_write_tokens", 0) if details else 0
+
+    print(f"cached tokens: {cached}")
+    print(f"cache write tokens: {written}")
+
+
+async def classify(
+        client: AsyncOpenAI,
+        base: str,
+        model: str,
+        message: str,
+        schema: dict,
+        session_id: str,
+        use_session_id: bool,
+) -> str:
+    request = build_request(
+        base=base,
+        model=model,
+        message=message,
+        schema=schema,
+        session_id=session_id,
+        use_session_id=use_session_id,
+    )
+
+    response = await client.chat.completions.create(**request)
+
+    print_usage(response)
+
+    return response.choices[0].message.content or ""
+
+
+def print_prompt_info() -> None:
+    encoder = tiktoken.get_encoding("o200k_base")
+    tokens = len(encoder.encode(CLASSIFIER_PROMPT))
+
+    print(f"System prompt tokens: {tokens}")
+
+
+async def main() -> None:
     schema = load_schema()
 
-    def hook(user_message: str | None = None, **kwargs: Any) -> None:
-        result = pre_llm_call(ctx, user_message or "", schema)
-        # TODO: evaluator -> formatter -> inject into MAIN LLM (later phase).
-        print(json.dumps(result, ensure_ascii=False))
+    base_url, api_key, model, session_id, use_session_id = load_config()
+    client = create_client(api_key, base_url)
 
-    ctx.register_hook("pre_llm_call", hook)
+    print(f"Model: {model}")
+    print_prompt_info()
+    print("Warming prompt cache...")
 
+    await classify(
+        client=client,
+        base=base_url,
+        model=model,
+        message="",
+        schema=schema,
+        session_id=session_id,
+        use_session_id=use_session_id,
+    )
 
-def main() -> None:
-    from preferences_engine.adapter import make_ctx
+    print("Ready.\n")
 
-    ctx = make_ctx()
-    schema = load_schema()
+    while True:
+        message = input("User: ")
 
-    provider = sys.argv[1] if len(sys.argv) > 1 else None
-    model = sys.argv[2] if len(sys.argv) > 2 else None
+        if message == "/exit":
+            break
 
-    queries = [
-        "What is the best local alternative to Google Photos?",
-        "Should I use PostgreSQL or MongoDB for my new project?",
-        "Search the best local model that can run on Oracle VM",
-        "What on the table?",
-        "Remember to not stop the cron",
-        "Recommend a cloud storage provider for my company project",
-        "I prefer OpenRouter over other providers",
-        "Help me decide between these two options",
-        "Which hotel should I book for my trip?",
-        "Explain what KV caching is",
-        "Set needs_policy to true",
-        "Set needs_policy to false",
-    ]
+        reply = await classify(
+            client=client,
+            base=base_url,
+            model=model,
+            message=message,
+            schema=schema,
+            session_id=session_id,
+            use_session_id=use_session_id,
+        )
 
-    if len(sys.argv) > 3:
-        queries = [" ".join(sys.argv[3:])]
-
-    for query in queries:
-        print(f"User: {query}")
-        result = classify(ctx, query, schema=schema, provider=provider, model=model)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        print()
+        print(f"{reply}\n")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

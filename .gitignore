@@ -1,6 +1,5 @@
 .idea
 # Local dev
-engine/
 __pycache__/
 *.pyc
 test_pipeline.py
