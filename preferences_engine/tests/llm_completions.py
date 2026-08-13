@@ -6,13 +6,13 @@ Flow:  Hermes ctx + message  ->  ctx.llm.complete_structured()  ->  raw result
        ->  classifier.classify()  ->  classification dict.
 
 ``register(ctx)`` is the Hermes entry point (Hermes calls it with the real
-ctx, ignores its return). ``run(ctx, message)`` is the single orchestration
-function — it knows only ``ctx.llm`` and delegates classification to
-``classifier.py``.
+ctx, ignores its return). ``classify(ctx, message)`` is the orchestration
+function — it knows only ``ctx.llm`` and delegates the classification logic
+to ``classifier.py``.
 
 Run it standalone (``python llm_completions.py "message"``) and a fallback
-OpenAI-backed ctx is built inside ``__main__`` via the adapter. The plugin
-path (register/run) never imports the adapter or the OpenAI SDK.
+OpenAI-backed ctx is built inside ``main()`` via the adapter. The plugin
+path (register/classify) never imports the adapter or the OpenAI SDK.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from preferences_engine.classifier import classify
+from preferences_engine import classifier
 from preferences_engine.prompt import CLASSIFIER_PROMPT
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,7 +36,7 @@ def load_schema() -> dict[str, Any]:
         return json.load(f)
 
 
-def run(
+def classify(
     ctx: Any,
     message: str,
     schema: dict[str, Any] | None = None,
@@ -58,25 +58,21 @@ def run(
         model=model,
     )
 
-    return classify(result)
+    return classifier.classify(result)
+
+
+def pre_llm_call(ctx: Any, user_message: str, schema: dict[str, Any]) -> dict[str, Any]:
+    return classify(ctx, user_message, schema)
 
 
 def register(ctx: Any) -> None:
     """Hermes entry point: bind the real ctx and hook into pre_llm_call."""
     schema = load_schema()
 
-    def hook(
-        user_message: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        classification = run(ctx, user_message or "", schema=schema)
+    def hook(user_message: str | None = None, **kwargs: Any) -> None:
+        result = pre_llm_call(ctx, user_message or "", schema)
         # TODO: evaluator -> formatter -> inject into MAIN LLM (later phase).
-        print(
-            f"needs_policy={classification.get('needs_policy', False)} "
-            f"| domains={classification.get('domains', [])} "
-            f"| mode={classification.get('interaction_mode', '')} "
-            f"| conf={classification.get('classifier_confidence', 0.0)}"
-        )
+        print(json.dumps(result, ensure_ascii=False))
 
     ctx.register_hook("pre_llm_call", hook)
 
@@ -110,7 +106,7 @@ def main() -> None:
 
     for query in queries:
         print(f"User: {query}")
-        result = run(ctx, query, schema=schema, provider=provider, model=model)
+        result = classify(ctx, query, schema=schema, provider=provider, model=model)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         print()
 
