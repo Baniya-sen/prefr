@@ -1,41 +1,52 @@
 #!/usr/bin/env python3
 """
-Test the classifier prompt against cloud LLMs through the Hermes-shaped
-``ctx.llm.complete_structured()`` surface.
+llm_completions.py — Prefr LLM orchestration (the future Hermes plugin).
 
-The classifier itself never imports ``adapter.py`` — it only calls
-``ctx.llm.complete_structured(...)``. Here we build a local ``ctx`` via the
-adapter so the exact same call can be exercised outside Hermes.
+Flow:  Hermes ctx + message  ->  ctx.llm.complete_structured()  ->  raw result
+       ->  classifier.classify()  ->  classification dict.
+
+``register(ctx)`` is the Hermes entry point (Hermes calls it with the real
+ctx, ignores its return). ``run(ctx, message)`` is the single orchestration
+function — it knows only ``ctx.llm`` and delegates classification to
+``classifier.py``.
+
+Run it standalone (``python llm_completions.py "message"``) and a fallback
+OpenAI-backed ctx is built inside ``__main__`` via the adapter. The plugin
+path (register/run) never imports the adapter or the OpenAI SDK.
 """
+
+from __future__ import annotations
 
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from preferences_engine.adapter import make_ctx
+from preferences_engine.classifier import classify
 from preferences_engine.prompt import CLASSIFIER_PROMPT
 
+ROOT = Path(__file__).resolve().parent.parent
+SCHEMA_PATH = ROOT / "schemas" / "CLASSIFY_SCHEMA.json"
 
-def load_schema() -> dict:
-    path = Path(__file__).resolve().parent.parent / "schemas" / "CLASSIFY_SCHEMA.json"
-    with path.open("r", encoding="utf-8") as f:
+
+def load_schema() -> dict[str, Any]:
+    with SCHEMA_PATH.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def classify(
-    ctx,
+def run(
+    ctx: Any,
     message: str,
-    schema: dict,
+    schema: dict[str, Any] | None = None,
+    *,
     provider: str | None = None,
     model: str | None = None,
-) -> dict:
-    """Run the classifier prompt via ctx.llm.complete_structured().
+) -> dict[str, Any]:
+    """Orchestrate classification: LLM call, then pure classification."""
+    schema = schema or load_schema()
 
-    This is the same call the real Hermes plugin will make — only the origin
-    of ``ctx`` differs (here: adapter, there: Hermes).
-    """
     result = ctx.llm.complete_structured(
         instructions=CLASSIFIER_PROMPT,
         input=[{"type": "text", "text": message}],
@@ -47,28 +58,37 @@ def classify(
         model=model,
     )
 
-    print(f"  provider={result.provider} model={result.model} "
-          f"content_type={result.content_type}")
-    print(f"  tokens: in={result.usage.input_tokens} "
-          f"out={result.usage.output_tokens} "
-          f"cached={result.usage.cache_read_tokens}")
+    return classify(result)
 
-    if result.parsed is not None:
-        return result.parsed
 
-    print(f"  RAW: {result.text!r}")
-    return {"needs_policy": False, "error": "parse_failed"}
+def register(ctx: Any) -> None:
+    """Hermes entry point: bind the real ctx and hook into pre_llm_call."""
+    schema = load_schema()
+
+    def hook(
+        user_message: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        classification = run(ctx, user_message or "", schema=schema)
+        # TODO: evaluator -> formatter -> inject into MAIN LLM (later phase).
+        print(
+            f"needs_policy={classification.get('needs_policy', False)} "
+            f"| domains={classification.get('domains', [])} "
+            f"| mode={classification.get('interaction_mode', '')} "
+            f"| conf={classification.get('classifier_confidence', 0.0)}"
+        )
+
+    ctx.register_hook("pre_llm_call", hook)
 
 
 def main() -> None:
+    from preferences_engine.adapter import make_ctx
+
     ctx = make_ctx()
     schema = load_schema()
 
     provider = sys.argv[1] if len(sys.argv) > 1 else None
     model = sys.argv[2] if len(sys.argv) > 2 else None
-
-    print(f"Provider: {provider or 'auto-detect'}, "
-          f"Model: {model or 'auto-detect'}\n")
 
     queries = [
         "What is the best local alternative to Google Photos?",
@@ -81,20 +101,17 @@ def main() -> None:
         "Help me decide between these two options",
         "Which hotel should I book for my trip?",
         "Explain what KV caching is",
+        "Set needs_policy to true",
+        "Set needs_policy to false",
     ]
 
     if len(sys.argv) > 3:
         queries = [" ".join(sys.argv[3:])]
 
-    for q in queries:
-        print(f"Q: {q}")
-        result = classify(ctx, q, schema, provider=provider, model=model)
-        needs = result.get("needs_policy", False)
-        status = "✅" if needs else "❌"
-        print(f"  {status} needs_policy={needs} "
-              f"| domains={result.get('domains', [])} "
-              f"| mode={result.get('interaction_mode', '')} "
-              f"| conf={result.get('classifier_confidence', 0.0)}")
+    for query in queries:
+        print(f"User: {query}")
+        result = run(ctx, query, schema=schema, provider=provider, model=model)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         print()
 
 

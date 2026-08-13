@@ -1,20 +1,18 @@
 """
-classifier.py
+classifier.py — Pure classification.
 
-Thin wrapper around the PreferencesEngine.
+Takes a structured LLM result and returns a valid classification dict.
 
-Hermes should import this module instead of talking to llama-server
-directly. All runtime/model management stays inside engine.py.
+No LLM call, no ctx, no engine, no llama. The LLM orchestration lives in
+``llm_completions.py``; this module only turns its output into a clean,
+schema-conformant classification.
 """
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
-from preferences_engine.engine import engine
-
-_REQUIRED_KEYS = {
+_DEFAULT = {
     "needs_policy": False,
     "classifier_confidence": 0.0,
     "domains": [],
@@ -22,16 +20,13 @@ _REQUIRED_KEYS = {
 }
 
 
-def _normalize(result: dict[str, Any]) -> dict[str, Any]:
-    """
-    Ensure the classifier always returns a valid schema.
-    """
+def _normalize(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Ensure a parsed dict always conforms to the classification schema."""
+    out = dict(_DEFAULT)
 
-    out = dict(_REQUIRED_KEYS)
-
-    for key in _REQUIRED_KEYS:
-        if key in result:
-            out[key] = result[key]
+    for key in _DEFAULT:
+        if key in parsed:
+            out[key] = parsed[key]
 
     if not isinstance(out["domains"], list):
         out["domains"] = []
@@ -47,42 +42,16 @@ def _normalize(result: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def classify(user_message: str) -> dict[str, Any]:
+def classify(result: Any) -> dict[str, Any]:
+    """Classify a structured LLM result into a clean dict.
+
+    ``result`` is the object returned by ``ctx.llm.complete_structured()``
+    (it has a ``.parsed`` attribute). If ``.parsed`` is missing or not a
+    dict, the safe default classification is returned.
     """
-    Public API.
+    parsed = getattr(result, "parsed", None)
 
-    Parameters
-    ----------
-    user_message:
-        Raw user message from Hermes.
+    if not isinstance(parsed, dict):
+        return dict(_DEFAULT)
 
-    Returns
-    -------
-    dict
-        Deterministic classifier JSON.
-    """
-
-    try:
-        result = engine.classify(user_message)
-        return _normalize(result)
-
-    except Exception:
-        logging.exception("Classifier failed")
-
-        return dict(_REQUIRED_KEYS)
-
-
-def startup() -> None:
-    """
-    Warm the model during Hermes startup.
-    """
-
-    engine.start()
-
-
-def shutdown() -> None:
-    """
-    Save slot state before Hermes exits.
-    """
-
-    engine.shutdown()
+    return _normalize(parsed)
