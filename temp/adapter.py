@@ -28,9 +28,13 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 
 from openai import OpenAI
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+# Load API keys from any of: repo .env, Hermes' own .env, or the shell env.
+load_dotenv(ROOT / ".env")
+load_dotenv(Path.home() / ".hermes" / ".env")
 
 # ---------------------------------------------------------------------------
 # Data classes — mirror agent/plugin_llm.py:77-155
@@ -484,11 +488,22 @@ def make_ctx(*, plugin_id: str = "prefr") -> PluginContext:
 
 
 def main() -> None:
-    from prefr import register
+    import importlib.util
+
+    # Load the plugin entry (repo-root __init__.py) as a synthetic module.
+    # The repo dir is named "hermes-preference-engine" (hyphens) so it can't
+    # be imported as a normal package; importlib sidesteps that.
+    init_path = ROOT / "__init__.py"
+    spec = importlib.util.spec_from_file_location("prefr_plugin", init_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load plugin entry: {init_path}")
+    plugin = importlib.util.module_from_spec(spec)
+    sys.modules["prefr_plugin"] = plugin
+    spec.loader.exec_module(plugin)
 
     ctx = make_ctx()
 
-    register(ctx)
+    plugin.register(ctx)
 
     print("Prefr Hermes adapter ready.")
     print("Type /exit to quit.\n")
