@@ -9,3 +9,6 @@ SPEC.md
 *.sha256
 AGENTS.md
 .env
+
+# Local llama.cpp runtime (binaries + models, ~4GB)
+engine/
