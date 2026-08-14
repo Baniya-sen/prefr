@@ -1,6 +1,5 @@
 .idea
 # Local dev
-engine/
 __pycache__/
 *.pyc
 test_pipeline.py
@@ -10,3 +9,6 @@ SPEC.md
 *.sha256
 AGENTS.md
 .env
+
+# Local llama.cpp runtime (binaries + models, ~4GB)
+engine/
