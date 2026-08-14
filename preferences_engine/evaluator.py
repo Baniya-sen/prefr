@@ -12,7 +12,7 @@ MAX_PREFERENCES = 6
 MIN_SCORE = 100
 
 
-class Evaluator:
+class PreferenceEvaluator:
 
     def __init__(self, policy_path: Path | str = POLICIES):
         self.policy_path = Path(policy_path)
@@ -103,6 +103,3 @@ class Evaluator:
                 break
 
         return selected
-
-
-evaluator = Evaluator()
