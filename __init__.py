@@ -24,9 +24,9 @@ def register(ctx: Any) -> None:
     def pre_llm_call(
         user_message: str | None = None,
         **kwargs: Any,
-    ) -> dict[str, str]:
+    ) -> dict[str, str] | None:
         if not user_message:
-            return {}
+            return None
 
         classifier_model = None
         classifier_provider = None
@@ -39,6 +39,6 @@ def register(ctx: Any) -> None:
             **kwargs
         )
 
-        return {"context": result} if result else {}
+        return {"context": result} if result else None
 
     ctx.register_hook("pre_llm_call", pre_llm_call)
