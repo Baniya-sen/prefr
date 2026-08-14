@@ -12,3 +12,6 @@ AGENTS.md
 
 # Local llama.cpp runtime (binaries + models, ~4GB)
 engine/
+
+# Session runtime state (auto-created by session.py)
+session/

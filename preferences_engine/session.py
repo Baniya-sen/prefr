@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 
 from preferences_engine.config import SESSION_JSON
@@ -21,6 +21,7 @@ class SessionManager:
 
     def _load_json(self):
         session_file = Path(SESSION_JSON)
+        session_file.parent.mkdir(parents=True, exist_ok=True)
 
         if session_file.is_file():
             with open(session_file, "r", encoding="utf-8") as f:
@@ -33,6 +34,13 @@ class SessionManager:
             )
 
         self.session = Session(**session_json)
+
+    def _save_json(self) -> None:
+        session_file = Path(SESSION_JSON)
+        session_file.write_text(
+            json.dumps(asdict(self.session), indent=2),
+            encoding="utf-8",
+        )
 
     def start_session(self, session_id: str, model: str, platform: str, **kwargs) -> None:
         return
