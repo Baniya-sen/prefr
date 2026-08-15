@@ -412,53 +412,13 @@ Do not return null simply because the message does not require policy evaluation
 
 ---
 
-## ALLOWED DOMAINS
-
-software
-infrastructure
-shopping
-travel
-finance
-career
-health
-communication
-productivity
-general
-
----
-
-## ALLOWED INTERACTION MODES
-
-recommend
-compare
-decide
-plan
-learn
-review
-brainstorm
-troubleshoot
-other
-
----
-
 ## OUTPUT
 
-Return exactly one JSON object:
-
-{
-  "needs_policy": boolean,
-  "classifier_confidence": number,
-  "domains": string[],
-  "interaction_mode": string
-}
+Return exactly one JSON object matching the output schema provided below.
 
 Rules:
 
-- needs_policy must be true or false.
-- classifier_confidence must be between 0.0 and 1.0.
-- domains must contain only allowed domain values.
 - domains should normally contain one best-fit domain.
-- interaction_mode must contain exactly one allowed value.
 - Null classification must use the specified null values.
 - Do not add fields.
 - Do not output Markdown.
