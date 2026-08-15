@@ -28,7 +28,7 @@ def register(ctx: Any) -> None:
     ctx.register_hook("on_session_end", partial(on_session_end, session_manager))
     ctx.register_hook("on_session_finalize", partial(on_session_finalize, session_manager))
     ctx.register_hook("on_session_reset", partial(on_session_reset, session_manager))
-    ctx.register_hook("pre_llm_call", partial(pre_llm_call, ctx, pipeline))
+    ctx.register_hook("pre_llm_call", partial(pre_llm_call, ctx, pipeline, session_manager))
 
 
 def on_session_start(
@@ -73,11 +73,20 @@ def on_session_reset(
 def pre_llm_call(
         ctx: Any,
         pipeline: PreferencePipeline,
+        session_manager: SessionManager,
         user_message: str | None = None,
         **kwargs: Any
 ) -> dict[str, str] | None:
     if not user_message:
         return None
+
+    # Reconcile: if the current turn's session id differs from what we hold,
+    # self-heal by re-initialising state for the new session before injecting.
+    session_manager.ensure_session(
+        kwargs.get("session_id"),
+        kwargs.get("model"),
+        kwargs.get("platform"),
+    )
 
     classifier_model = None
     classifier_provider = None

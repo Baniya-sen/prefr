@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 from preferences_engine.config import SESSION_JSON
@@ -12,6 +13,10 @@ _DEFAULT_SESSION = {
   "model": None,
   "platform": None
 }
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 class SessionManager:
@@ -42,8 +47,21 @@ class SessionManager:
             encoding="utf-8",
         )
 
+    def ensure_session(self, session_id: str | None, model: str | None, platform: str, **kwargs) -> None:
+        """Reconcile identity: re-init only when the current id is stale or None."""
+        if self.session is None or self.session.session_id != session_id:
+            self.session = Session(
+                session_id=session_id,
+                started_at=_now(),
+                last_seen=_now(),
+                turn_count=0,
+                model=model,
+                platform=platform,
+            )
+            self._save_json()
+
     def start_session(self, session_id: str, model: str, platform: str, **kwargs) -> None:
-        return
+        self.ensure_session(session_id, model, platform)
 
     def end_session(
         self,
@@ -54,13 +72,17 @@ class SessionManager:
         platform: str,
         **kwargs
     ) -> None:
-        return
+        self.ensure_session(session_id, model, platform)
+        self.session.turn_count += 1
+        self.session.last_seen = _now()
+        self._save_json()
 
     def finalize_session(self, session_id: str | None, platform: str, **kwargs) -> None:
-        return
+        self.session = Session()
+        self._save_json()
 
     def reset_session(self, session_id: str, platform: str, **kwargs) -> None:
-        return
+        self.ensure_session(session_id, None, platform)
 
 
 @dataclass
