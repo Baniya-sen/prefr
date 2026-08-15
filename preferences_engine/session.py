@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from preferences_engine.config import SESSION_JSON
 
@@ -43,6 +44,7 @@ class SessionManager:
         if self.session is None or self.session.session_id != session_id:
             self.session = Session(
                 session_id=session_id,
+                policies_injected=[],
                 started_at=_now(),
                 last_seen=_now(),
                 turn_count=0,
@@ -75,10 +77,32 @@ class SessionManager:
     def reset_session(self, session_id: str, platform: str, **kwargs) -> None:
         self.ensure_session(session_id, None, platform)
 
+    def deduplicate(
+            self,
+            policies: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        injected = self.session.policies_injected or []
+
+        new_policies: list[dict[str, Any]] = []
+
+        for policy in policies:
+            policy_id = str(policy.get("id", "")).strip()
+
+            if policy_id not in injected:
+                new_policies.append(policy)
+                injected.append(policy_id)
+
+        self.session.policies_injected = injected
+        self._save_json()
+
+        return new_policies, injected
+
+
 
 @dataclass
 class Session:
     session_id: str | None = None
+    policies_injected: list[str] | None = None
     started_at: str | None = None
     last_seen: str | None = None
     turn_count: int = 0

@@ -1,6 +1,9 @@
 name: prefr
+
 version: 0.1.0
+
 description: Preference engine — classifies user messages against domains/interaction modes, evaluates policies, and injects a <user-preferences> block into the LLM prompt
+
 provides_hooks:
   - pre_llm_call
   - on_session_start

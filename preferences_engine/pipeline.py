@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from preferences_engine.classifier import classify
 from preferences_engine.config import INJECTION_WINDOW
+from preferences_engine.session import SessionManager
+from preferences_engine.classifier import classify
 from preferences_engine.engine import PreferencesEngine
 from preferences_engine.evaluator import PreferenceEvaluator
 from preferences_engine.formatter import PreferenceFormatter
@@ -12,6 +13,7 @@ from preferences_engine.prompt import get_prompt
 
 class PreferencePipeline:
     def __init__(self):
+        self.session_manager = SessionManager()
         self.engine = PreferencesEngine()
         self.evaluator = PreferenceEvaluator()
         self.formatter = PreferenceFormatter()
@@ -43,7 +45,8 @@ class PreferencePipeline:
 
         classification = classify(llm_classify_result)
         policies = self.evaluator.evaluate(classification)
-        injection = self.formatter.format(policies)
+        abstracted, referenced = self.session_manager.deduplicate(policies)
+        injection = self.formatter.format(abstracted, referenced)
 
         return injection if isinstance(injection, str) else ""
 

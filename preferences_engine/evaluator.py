@@ -6,10 +6,10 @@ from typing import Any
 
 import yaml  # pip install pyyaml
 
-from preferences_engine.config import POLICIES
+from preferences_engine.config import POLICIES, SESSION_JSON
 
 MAX_PREFERENCES = 6
-MIN_SCORE = 100
+MIN_SCORE = 60
 
 
 class PreferenceEvaluator:
@@ -17,7 +17,17 @@ class PreferenceEvaluator:
     def __init__(self, policy_path: Path | str = POLICIES):
         self.policy_path = Path(policy_path)
         self._policies: list[dict[str, Any]] = []
+        self._load_session_policies()
         self.reload()
+
+    def _load_session_policies(self):
+        session_file = Path(SESSION_JSON)
+
+        if session_file.is_file():
+            with open(session_file, "r", encoding="utf-8") as f:
+                self._session_policies = json.load(f).get("policies_injected", [])
+        else:
+            self._session_policies = {}
 
     def reload(self) -> None:
         self._policies = []
@@ -57,9 +67,9 @@ class PreferenceEvaluator:
     def _map_weight(self, score: float) -> str:
         if score >= 160:
             return "HIGH"
-        elif score >= 130:
+        elif score >= 120:
             return "MEDIUM"
-        elif score >= 100:
+        elif score >= 80:
             return "LOW"
         return "DROP"
 
