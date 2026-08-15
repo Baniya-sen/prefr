@@ -48,11 +48,19 @@ class PreferencePipeline:
         )
 
         classification = classify(llm_classify_result)
+
+        # Early return: nothing policy-relevant → no injection, no session write.
+        if not classification.get("needs_policy", False):
+            return ""
+
         policies = self.evaluator.evaluate(classification)
         abstracted, referenced = self.session_manager.deduplicate(policies)
-        injection = self.formatter.format(abstracted, referenced)
 
-        return injection if isinstance(injection, str) else ""
+        # Early return: everything already injected this session.
+        if not abstracted:
+            return ""
+
+        return self.formatter.format(abstracted, referenced)
 
     def _build_user_window(
             self,
