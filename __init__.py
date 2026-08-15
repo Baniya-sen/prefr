@@ -94,6 +94,7 @@ def pre_llm_call(
     result = pipeline.preference_pipeline(
         ctx=ctx,
         user_message=user_message,
+        session_id=kwargs.get("session_id"),
         classifier_model=classifier_model,
         classifier_provider=classifier_provider,
         **kwargs
