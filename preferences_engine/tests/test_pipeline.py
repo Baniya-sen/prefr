@@ -2,18 +2,19 @@
 """Test the full preference engine pipeline: classify -> evaluate -> format."""
 
 import sys
+from types import SimpleNamespace
 
 from preferences_engine.classifier import classify
-from preferences_engine.evaluator import evaluator
-from preferences_engine.formatter import formatter
+from preferences_engine.evaluator import PreferenceEvaluator
+from preferences_engine.formatter import PreferenceFormatter
 
 
 def run_pipeline(query: str) -> None:
     print(f"Q: {query}")
     print("-" * 60)
 
-    # Step 1: Classify
-    classification = classify(query)
+    # Step 1: Classify (classify takes a result object exposing .parsed/.text)
+    classification = classify(SimpleNamespace(parsed=None, text=query))
     print(f"Classification: {classification}")
 
     if not classification.get("needs_policy", False):
@@ -21,13 +22,13 @@ def run_pipeline(query: str) -> None:
         return
 
     # Step 2: Evaluate
-    policies = evaluator.evaluate(classification)
+    policies = PreferenceEvaluator().evaluate(classification)
     print(f"Matched policies: {len(policies)}")
     for p in policies:
         print(f"  [{p.get('weight', '?')}] {p['id']} (score: {p.get('score', '?')})")
 
     # Step 3: Format for injection
-    injection = formatter.format(policies)
+    injection = PreferenceFormatter().format(policies)
     print(f"\nInjection block:\n{injection}\n")
 
 

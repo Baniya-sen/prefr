@@ -1,0 +1,32 @@
+{
+  "software": {
+    "description": "apps, programming, AI models, APIs, developer tools, software, digital platforms"
+  },
+  "infrastructure": {
+    "description": "servers, cloud, VMs, deployment, hosting, networking, system infrastructure"
+  },
+  "shopping": {
+    "description": "products, purchasing, product selection, buying decisions"
+  },
+  "travel": {
+    "description": "destinations, trips, hotels, transport, itineraries"
+  },
+  "finance": {
+    "description": "money, banking, investments, loans, payments, financial decisions"
+  },
+  "career": {
+    "description": "jobs, hiring, employment, workplace, career decisions"
+  },
+  "health": {
+    "description": "medical, fitness, nutrition, healthcare, body-related concerns"
+  },
+  "communication": {
+    "description": "messages, writing, conversations, interpersonal communication"
+  },
+  "productivity": {
+    "description": "tasks, organization, workflows, reminders, planning"
+  },
+  "general": {
+    "description": "fallback when no other domain is appropriate"
+  }
+}

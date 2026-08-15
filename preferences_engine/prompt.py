@@ -303,47 +303,9 @@ Examples:
 
 Choose the best-fit domain based on the user's actual meaning.
 
-software:
-apps, programming, AI models, APIs, developer tools, software, digital platforms
-
-infrastructure:
-servers, cloud, VMs, deployment, hosting, networking, system infrastructure
-
-shopping:
-products, purchasing, product selection, buying decisions
-
-travel:
-destinations, trips, hotels, transport, itineraries
-
-finance:
-money, banking, investments, loans, payments, financial decisions
-
-career:
-jobs, hiring, employment, workplace, career decisions
-
-health:
-medical, fitness, nutrition, healthcare, body-related concerns
-
-communication:
-messages, writing, conversations, interpersonal communication
-
-productivity:
-tasks, organization, workflows, reminders, planning
-
-general:
-fallback when no other domain is appropriate
+The available domains and their descriptions are provided separately in this prompt.
 
 If multiple domains are possible, select the domain most central to the user's intent.
-
-For software, prefer `software` when the message concerns:
-- software
-- apps
-- AI models
-- APIs
-- programming tools
-- digital services
-- technical platforms
-- alternatives to digital products
 
 Do not classify based only on individual keywords.
 
@@ -351,34 +313,9 @@ Do not classify based only on individual keywords.
 
 ## INTERACTION_MODE
 
-Choose exactly one:
+Choose exactly one interaction mode.
 
-recommend:
-the user wants a recommendation or suggestion
-
-compare:
-the user wants alternatives or options compared
-
-decide:
-the user is making or requesting help with a decision
-
-plan:
-the user wants a plan, itinerary, workflow, or structured approach
-
-learn:
-the user wants information or an explanation
-
-review:
-the user wants something examined, checked, verified, or evaluated
-
-brainstorm:
-the user wants ideas or possibilities
-
-troubleshoot:
-the user is diagnosing or fixing a problem
-
-other:
-clear intent exists but none of the above is appropriate
+The available interaction modes and their descriptions are provided separately in this prompt.
 
 ---
 

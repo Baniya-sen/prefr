@@ -1,0 +1,29 @@
+{
+  "recommend": {
+    "description": "the user wants a recommendation or suggestion"
+  },
+  "compare": {
+    "description": "the user wants alternatives or options compared"
+  },
+  "decide": {
+    "description": "the user is making or requesting help with a decision"
+  },
+  "plan": {
+    "description": "the user wants a plan, itinerary, workflow, or structured approach"
+  },
+  "learn": {
+    "description": "the user wants information or an explanation"
+  },
+  "review": {
+    "description": "the user wants something examined, checked, verified, or evaluated"
+  },
+  "brainstorm": {
+    "description": "the user wants ideas or possibilities"
+  },
+  "troubleshoot": {
+    "description": "the user is diagnosing or fixing a problem"
+  },
+  "other": {
+    "description": "clear intent exists but none of the above is appropriate"
+  }
+}

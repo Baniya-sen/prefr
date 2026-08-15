@@ -5,15 +5,11 @@
         "classifier_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.0},
         "domains": {
             "type": "array",
-            "items": {
-                "type": "string",
-                "enum": ["software", "infrastructure", "shopping", "travel", "finance", "career", "health", "communication", "productivity", "general"]
-            },
+            "items": {"type": "string"},
             "default": []
         },
         "interaction_mode": {
             "type": "string",
-            "enum": ["recommend", "compare", "decide", "plan", "learn", "review", "brainstorm", "troubleshoot", "other"],
             "default": ""
         }
     },

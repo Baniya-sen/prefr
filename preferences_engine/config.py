@@ -25,9 +25,11 @@ ROOT = Path(__file__).parent
 
 POLICIES = ROOT / "policies"
 RUNTIME_DIR = ROOT / "runtime"
-SCHEMAS_DIR = ROOT / "schemas"
 SESSION_DIR = ROOT / "session"
+CLASSIFICATION_DIR = ROOT / "classification"
 
-SCHEMA = SCHEMAS_DIR / "CLASSIFY_SCHEMA.json"
+SCHEMA = CLASSIFICATION_DIR / "CLASSIFY_SCHEMA.json"
+DOMAINS = CLASSIFICATION_DIR / "domains.json"
+INTERACTION_MODES = CLASSIFICATION_DIR / "interaction_modes.json"
 SESSION_JSON = SESSION_DIR / "session.json"
 LOG_FILE = RUNTIME_DIR / "preferences_engine.log"
