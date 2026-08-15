@@ -5,15 +5,6 @@ from pathlib import Path
 
 from preferences_engine.config import SESSION_JSON
 
-_DEFAULT_SESSION = {
-  "session_id": None,
-  "started_at": None,
-  "last_seen": None,
-  "turn_count": 0,
-  "model": None,
-  "platform": None
-}
-
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -32,9 +23,9 @@ class SessionManager:
             with open(session_file, "r", encoding="utf-8") as f:
                 session_json = json.load(f)
         else:
-            session_json = _DEFAULT_SESSION
+            session_json = asdict(Session())
             session_file.write_text(
-                json.dumps(_DEFAULT_SESSION, indent=2),
+                json.dumps(session_json, indent=2),
                 encoding="utf-8"
             )
 

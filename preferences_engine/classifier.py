@@ -12,13 +12,22 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from preferences_engine.config import SCHEMA
 
-_DEFAULT = {
-    "needs_policy": False,
-    "classifier_confidence": 0.0,
-    "domains": [],
-    "interaction_mode": "",
-}
+
+def _load_default() -> dict[str, Any]:
+    """Derive the null classification from the output schema's ``default``
+    values. The schema stays the single source of truth for field shape —
+    add a field with a default there and it flows into the null fallback."""
+    with open(SCHEMA, "r", encoding="utf-8") as f:
+        schema = json.load(f)
+    return {
+        name: spec.get("default")
+        for name, spec in schema.get("properties", {}).items()
+    }
+
+
+_DEFAULT = _load_default()
 
 
 def classify(result: Any) -> dict[str, Any]:
