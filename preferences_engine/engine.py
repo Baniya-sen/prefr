@@ -46,7 +46,7 @@ class PreferencesEngine:
         self,
         *,
         ctx: Any,
-        user_message: str,
+        user_messages: list[str],
         system_prompt: str,
         classifier_provider: str | None = None,
         classifier_model: str | None = None,
@@ -55,11 +55,20 @@ class PreferencesEngine:
         if not self.started:
             self.start()
 
+        # Prior messages are context; the last is the classification target.
+        input_blocks: list[dict] = []
+        if len(user_messages) > 1:
+            context = "\n".join(
+                f"Previous user message: {m}" for m in user_messages[:-1]
+            )
+            input_blocks.append({"type": "text", "text": context})
+        input_blocks.append({"type": "text", "text": user_messages[-1]})
+
         return ctx.llm.complete_structured(
             instructions="Classify the user message below.",
             system_prompt=system_prompt,
             json_mode=True,
-            input=[{"type": "text", "text": user_message}],
+            input=input_blocks,
             temperature=TEMPERATURE,
             max_tokens=MAX_TOKENS,
             purpose=PURPOSE,

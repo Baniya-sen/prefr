@@ -17,7 +17,7 @@ from typing import Any
 from functools import partial
 
 from preferences_engine.session import SessionManager
-from preferences_engine.pipeline import PreferencePipeline
+from preferences_engine.pipeline import PreferencePipeline, build_user_window
 
 
 def register(ctx: Any) -> None:
@@ -91,9 +91,14 @@ def pre_llm_call(
     classifier_model = None
     classifier_provider = None
 
+    user_messages = build_user_window(
+        kwargs.get("conversation_history"),
+        user_message,
+    )
+
     result = pipeline.preference_pipeline(
         ctx=ctx,
-        user_message=user_message,
+        user_messages=user_messages,
         session_id=kwargs.get("session_id"),
         classifier_model=classifier_model,
         classifier_provider=classifier_provider,

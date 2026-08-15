@@ -11,6 +11,11 @@ MAX_TOKENS = 64
 TEMPERATURE = 0.1
 PURPOSE = "prefr.classifier"
 
+# Number of user messages the classifier sees (1 = current only, 2 = current +
+# previous, etc.). The prior messages are context for resolving references like
+# "the second one"; only the last message is the classification target.
+INJECTION_WINDOW = 1
+
 # ------------------------------------------------------------------
 # Runtime
 # ------------------------------------------------------------------
