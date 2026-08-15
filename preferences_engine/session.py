@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -81,28 +81,38 @@ class SessionManager:
             self,
             policies: list[dict[str, Any]]
     ) -> tuple[list[dict[str, Any]], list[str]]:
-        injected = self.session.policies_injected or []
+        """Return (new_policies, referenced).
+
+        new_policies = policies NOT yet injected this session (render full body).
+        referenced    = policies ALREADY injected this session that are still
+                        relevant (reference by id, don't re-inject).
+        """
+        injected = list(self.session.policies_injected or [])
 
         new_policies: list[dict[str, Any]] = []
+        referenced: list[str] = []
 
         for policy in policies:
             policy_id = str(policy.get("id", "")).strip()
-
-            if policy_id not in injected:
+            if not policy_id:
+                continue
+            if policy_id in injected:
+                referenced.append(policy_id)
+            else:
                 new_policies.append(policy)
                 injected.append(policy_id)
 
         self.session.policies_injected = injected
         self._save_json()
 
-        return new_policies, injected
+        return new_policies, referenced
 
 
 
 @dataclass
 class Session:
     session_id: str | None = None
-    policies_injected: list[str] | None = None
+    policies_injected: list[str] = field(default_factory=list)
     started_at: str | None = None
     last_seen: str | None = None
     turn_count: int = 0

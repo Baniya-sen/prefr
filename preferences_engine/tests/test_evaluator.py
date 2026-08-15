@@ -53,10 +53,10 @@ class TestMapWeight(unittest.TestCase):
         self.assertEqual(self.ev._map_weight(200.0), "HIGH")
         self.assertEqual(self.ev._map_weight(160.0), "HIGH")
         self.assertEqual(self.ev._map_weight(159.9), "MEDIUM")
-        self.assertEqual(self.ev._map_weight(130.0), "MEDIUM")
-        self.assertEqual(self.ev._map_weight(129.9), "LOW")
-        self.assertEqual(self.ev._map_weight(100.0), "LOW")
-        self.assertEqual(self.ev._map_weight(99.9), "DROP")
+        self.assertEqual(self.ev._map_weight(120.0), "MEDIUM")
+        self.assertEqual(self.ev._map_weight(119.9), "LOW")
+        self.assertEqual(self.ev._map_weight(80.0), "LOW")
+        self.assertEqual(self.ev._map_weight(79.9), "DROP")
         self.assertEqual(self.ev._map_weight(0.0), "DROP")
 
 

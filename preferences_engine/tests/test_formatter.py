@@ -29,8 +29,8 @@ class TestFormatEmpty(unittest.TestCase):
 class TestFormatBlock(unittest.TestCase):
     def test_delimiters(self):
         out = PreferenceFormatter().format([_policy()])
-        self.assertTrue(out.startswith("<user-preferences>"))
-        self.assertTrue(out.endswith("</user-preferences>"))
+        self.assertTrue(out.startswith("<prefr-injection"))
+        self.assertTrue(out.endswith("</prefr-injection>"))
 
 
 class TestFormatPolicy(unittest.TestCase):

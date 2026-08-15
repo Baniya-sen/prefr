@@ -6,7 +6,7 @@ from typing import Any
 
 import yaml  # pip install pyyaml
 
-from preferences_engine.config import POLICIES, SESSION_JSON
+from preferences_engine.config import POLICIES
 
 MAX_PREFERENCES = 6
 MIN_SCORE = 60
@@ -17,17 +17,7 @@ class PreferenceEvaluator:
     def __init__(self, policy_path: Path | str = POLICIES):
         self.policy_path = Path(policy_path)
         self._policies: list[dict[str, Any]] = []
-        self._load_session_policies()
         self.reload()
-
-    def _load_session_policies(self):
-        session_file = Path(SESSION_JSON)
-
-        if session_file.is_file():
-            with open(session_file, "r", encoding="utf-8") as f:
-                self._session_policies = json.load(f).get("policies_injected", [])
-        else:
-            self._session_policies = {}
 
     def reload(self) -> None:
         self._policies = []

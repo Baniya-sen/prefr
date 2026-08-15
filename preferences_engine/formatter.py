@@ -39,12 +39,13 @@ class PreferenceFormatter:
 
         return "\n".join(lines)
 
-    def format(self, policies: list[dict[str, Any]], referenced_policies: list[str]) -> str:
+    def format(self, policies: list[dict[str, Any]], referenced_policies: list[str] | None = None) -> str:
         """Return a compact preference block ready for LLM injection."""
 
         if not policies:
             return ""
 
+        referenced_policies = referenced_policies or []
         method = "full" if not referenced_policies else "compact"
         header = (
             f"<prefr-injection method='{method}'>\n"

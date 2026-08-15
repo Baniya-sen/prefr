@@ -97,3 +97,5 @@ class PreferencePipeline:
                     parts.append(block)
 
             return "\n".join(parts)
+
+        return ""
