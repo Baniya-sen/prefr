@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,24 +20,36 @@ class SessionManager:
         session_file = Path(SESSION_JSON)
         session_file.parent.mkdir(parents=True, exist_ok=True)
 
+        # Fresh defaults; overwritten by a valid, known-schema file.
+        session_json = asdict(Session())
+
         if session_file.is_file():
-            with open(session_file, "r", encoding="utf-8") as f:
-                session_json = json.load(f)
-        else:
-            session_json = asdict(Session())
-            session_file.write_text(
-                json.dumps(session_json, indent=2),
-                encoding="utf-8"
-            )
+            try:
+                with open(session_file, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    # Drop unknown keys so Session(**...) never raises on a
+                    # stale/forward-compatible schema (removed or renamed fields).
+                    known = {f.name for f in fields(Session)}
+                    session_json = {k: v for k, v in loaded.items() if k in known}
+            except (OSError, json.JSONDecodeError):
+                # Corrupt or half-written file -> fall back to fresh defaults.
+                pass
 
         self.session = Session(**session_json)
 
     def _save_json(self) -> None:
-        session_file = Path(SESSION_JSON)
-        session_file.write_text(
-            json.dumps(asdict(self.session), indent=2),
-            encoding="utf-8",
-        )
+        try:
+            session_file = Path(SESSION_JSON)
+            session_file.parent.mkdir(parents=True, exist_ok=True)
+            session_file.write_text(
+                json.dumps(asdict(self.session), indent=2),
+                encoding="utf-8",
+            )
+        except OSError:
+            # Disk full / permissions — never crash the turn over state that is
+            # not critical to the injection itself.
+            pass
 
     def ensure_session(self, session_id: str | None, model: str | None, platform: str, **kwargs) -> None:
         """Reconcile identity: re-init only when the current id is stale or None."""
