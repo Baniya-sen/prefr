@@ -77,6 +77,26 @@ class SessionManager:
     def reset_session(self, session_id: str, platform: str, **kwargs) -> None:
         self.ensure_session(session_id, None, platform)
 
+    def detect_compaction(self, conversation_history: list[Any] | None) -> bool:
+        """Detect a context compaction by comparing the incoming history length
+        against the stored anchor. History grows monotonically between turns and
+        shrinks only when compaction collapses a long middle into a summary — so
+        a shrink means our injected blocks were dropped, and we clear the
+        already-injected set so they get re-injected.
+
+        Takes the raw history and derives length itself; callers pass it through.
+        """
+        history_len = len(conversation_history or [])
+        anchor = self.session.history_length or 0
+
+        compacted = history_len < anchor
+        if compacted:
+            self.session.policies_injected = []
+
+        self.session.history_length = history_len
+        self._save_json()
+        return compacted
+
     def deduplicate(
             self,
             policies: list[dict[str, Any]]
@@ -113,6 +133,7 @@ class SessionManager:
 class Session:
     session_id: str | None = None
     policies_injected: list[str] = field(default_factory=list)
+    history_length: int = 0
     started_at: str | None = None
     last_seen: str | None = None
     turn_count: int = 0

@@ -89,6 +89,52 @@ class TestDedupWithDuplicates(unittest.TestCase):
         self.assertEqual(m.session.policies_injected, [])
 
 
+class TestDetectCompaction(unittest.TestCase):
+    def _manager(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        session_file = Path(tmp.name) / "session.json"
+        patcher = mock.patch("preferences_engine.session.SESSION_JSON", session_file)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        m = SessionManager()
+        m.ensure_session("session-1", "model", "telegram")
+        return m
+
+    def test_growth_is_not_compaction(self):
+        m = self._manager()
+        self.assertFalse(m.detect_compaction([{"role": "user"}] * 5))
+        self.assertFalse(m.detect_compaction([{"role": "user"}] * 8))
+        self.assertEqual(m.session.history_length, 8)
+
+    def test_shrink_is_compaction_and_clears_injected(self):
+        m = self._manager()
+        m.detect_compaction([{"role": "user"}] * 10)
+        # Something got injected in the meantime.
+        m.session.policies_injected = ["local_first", "low_cost"]
+        # History shrinks -> compaction.
+        self.assertTrue(m.detect_compaction([{"role": "user"}] * 3))
+        self.assertEqual(m.session.policies_injected, [])
+        self.assertEqual(m.session.history_length, 3)
+
+    def test_same_length_is_not_compaction(self):
+        m = self._manager()
+        m.detect_compaction([{"role": "user"}] * 4)
+        self.assertFalse(m.detect_compaction([{"role": "user"}] * 4))
+
+    def test_none_history_treated_as_empty(self):
+        m = self._manager()
+        # First call with None -> anchor set to 0.
+        self.assertFalse(m.detect_compaction(None))
+        self.assertEqual(m.session.history_length, 0)
+
+    def test_first_call_with_content_sets_anchor(self):
+        m = self._manager()
+        # No prior anchor -> history_len 7 >= 0 -> not compaction, anchor=7.
+        self.assertFalse(m.detect_compaction([{"role": "user"}] * 7))
+        self.assertEqual(m.session.history_length, 7)
+
+
 class TestFormatterMethod(unittest.TestCase):
     def test_full_when_no_referenced(self):
         out = PreferenceFormatter().format([_policy("local_first")], [])

@@ -28,6 +28,10 @@ class PreferencePipeline:
             classifier_provider: str | None = None,
             **kwargs: Any
     ) -> str:
+        # Compaction detection FIRST — before any LLM call — so a detected
+        # shrink clears already-injected state before we classify/dedup.
+        self.session_manager.detect_compaction(kwargs.get("conversation_history"))
+
         system_prompt = get_prompt(session_id)
         user_messages = self._build_user_window(
             kwargs.get("conversation_history"),
