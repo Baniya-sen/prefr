@@ -18,6 +18,12 @@ from functools import partial
 
 from preferences_engine.session import SessionManager
 from preferences_engine.pipeline import PreferencePipeline
+from preferences_engine.config import (
+    ALLOWED_MODELS,
+    ALLOWED_PROVIDERS,
+    CLASSIFIER_MODEL,
+    CLASSIFIER_PROVIDER,
+)
 
 
 def register(ctx: Any) -> None:
@@ -86,8 +92,13 @@ def pre_llm_call(
         kwargs.get("platform"),
     )
 
-    classifier_model = None
-    classifier_provider = None
+    # Classifier model/provider selection. Precedence:
+    #   1. our explicit knob (plugins.entries.prefr.model / .provider)
+    #   2. fall back to allowed[0] (first allowlisted entry)
+    #   3. else None -> host default
+    # Hermes enforces the chosen value must be in allowed_models / allowed_providers.
+    classifier_model = CLASSIFIER_MODEL or (ALLOWED_MODELS[0] if ALLOWED_MODELS else None)
+    classifier_provider = CLASSIFIER_PROVIDER or (ALLOWED_PROVIDERS[0] if ALLOWED_PROVIDERS else None)
 
     result = pipeline.preference_pipeline(
         ctx=ctx,
