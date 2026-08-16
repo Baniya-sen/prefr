@@ -10,6 +10,7 @@ from preferences_engine.config import POLICIES
 
 MAX_PREFERENCES = 6
 MIN_SCORE = 60
+MAX_RELATED_DEPTH = 3
 
 
 class PreferenceEvaluator:
@@ -63,42 +64,75 @@ class PreferenceEvaluator:
             return "LOW"
         return "DROP"
 
+    def _related_depth(self, confidence: float) -> int:
+        """How many hops of the `related` graph to expand, gated by classifier
+        confidence. Higher confidence trusts the classification more and pulls
+        a wider related set."""
+        if confidence >= 0.8:
+            return 3
+        if confidence >= 0.7:
+            return 2
+        if confidence >= 0.6:
+            return 1
+        return 0
+
     def evaluate(self, classification: dict[str, Any]) -> list[dict[str, Any]]:
 
         if not classification.get("needs_policy", False):
             return []
 
         domains = set(classification.get("domains", []))
-        matches: list[tuple[float, dict[str, Any]]] = []
+        confidence = float(classification.get("classifier_confidence", 0.0) or 0.0)
+        depth = self._related_depth(confidence)
+        by_id = {p.get("id"): p for p in self._policies if p.get("id")}
 
+        # Direct matches: policy domain intersects the classified domain(s).
+        direct: list[tuple[float, dict[str, Any]]] = []
         for policy in self._policies:
             applies = set(policy.get("applies_to", []))
-
             if domains and applies.isdisjoint(domains):
                 continue
-
             score = self._compute_score(policy, domains)
+            if score >= MIN_SCORE:
+                direct.append((score, policy))
+        direct.sort(key=lambda x: x[0], reverse=True)
 
-            if score < MIN_SCORE:
-                continue
+        # Related expansion: BFS over `related`, depth-capped, cycle-safe.
+        seen = {p.get("id") for _, p in direct}
+        related: list[tuple[float, dict[str, Any]]] = []
+        if depth > 0 and direct:
+            frontier = [(p.get("id"), 1) for _, p in direct]
+            while frontier:
+                pid, hop = frontier.pop(0)
+                if hop > depth:
+                    continue
+                policy = by_id.get(pid)
+                if not policy:
+                    continue
+                for rel_id in policy.get("related", []):
+                    if rel_id in seen:
+                        continue
+                    rel = by_id.get(rel_id)
+                    if not rel:
+                        continue
+                    seen.add(rel_id)
+                    score = self._compute_score(rel, domains)
+                    related.append((score, rel))
+                    frontier.append((rel_id, hop + 1))
+        related.sort(key=lambda x: x[0], reverse=True)
 
-            matches.append((score, policy))
-
-        matches.sort(key=lambda x: x[0], reverse=True)
+        # Direct matches first, then related (secondary).
+        collected = direct + related
 
         selected: list[dict[str, Any]] = []
-
-        for score, policy in matches:
+        for score, policy in collected:
             weight = self._map_weight(score)
             if weight == "DROP":
                 continue
-
             policy_copy = dict(policy)
             policy_copy["weight"] = weight
             policy_copy["score"] = score
-
             selected.append(policy_copy)
-
             if len(selected) >= MAX_PREFERENCES:
                 break
 

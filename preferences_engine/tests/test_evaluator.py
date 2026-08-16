@@ -106,5 +106,49 @@ class TestMaxPreferencesCap(unittest.TestCase):
         )
 
 
+class TestRelatedExpansion(unittest.TestCase):
+    """Related-graph traversal gated by classifier_confidence."""
+
+    def setUp(self):
+        self.ev = PreferenceEvaluator()
+
+    def test_related_depth_ladder(self):
+        self.assertEqual(self.ev._related_depth(1.0), 3)
+        self.assertEqual(self.ev._related_depth(0.8), 3)
+        self.assertEqual(self.ev._related_depth(0.7), 2)
+        self.assertEqual(self.ev._related_depth(0.6), 1)
+        self.assertEqual(self.ev._related_depth(0.59), 0)
+        self.assertEqual(self.ev._related_depth(0.5), 0)
+        self.assertEqual(self.ev._related_depth(0.0), 0)
+
+    def _ids(self, confidence: float) -> list[str]:
+        res = self.ev.evaluate({
+            "needs_policy": True,
+            "classifier_confidence": confidence,
+            "domains": ["development"],
+        })
+        return [p["id"] for p in res]
+
+    def test_no_related_at_low_confidence(self):
+        # depth 0 -> only the direct match.
+        self.assertEqual(self._ids(0.5), ["local_first"])
+
+    def test_related_depth_one(self):
+        # depth 1 -> direct + hop-1 related (low_cost, privacy_first).
+        self.assertEqual(self._ids(0.6), ["local_first", "low_cost", "privacy_first"])
+
+    def test_related_depth_three_reaches_hop_two(self):
+        # depth 3 -> reaches low_maintenance via low_cost (hop 2).
+        self.assertEqual(
+            self._ids(0.9),
+            ["local_first", "low_cost", "privacy_first", "low_maintenance"],
+        )
+
+    def test_related_cycle_safe_no_duplicates(self):
+        # local_first <-> privacy_first and low_cost <-> low_maintenance are cycles.
+        ids = self._ids(0.9)
+        self.assertEqual(len(ids), len(set(ids)))
+
+
 if __name__ == "__main__":
     unittest.main()
