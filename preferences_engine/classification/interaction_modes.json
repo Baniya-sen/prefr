@@ -11,8 +11,14 @@
   "plan": {
     "description": "the user wants a plan, itinerary, workflow, or structured approach"
   },
-  "learn": {
-    "description": "the user wants information or an explanation"
+  "learning": {
+    "description": "the user wants to learn, understand, or be taught something"
+  },
+  "explanation": {
+    "description": "the user is explaining their own thoughts, reasoning, idea, or concept"
+  },
+  "teaching": {
+    "description": "the user is teaching or conveying knowledge or how something works"
   },
   "review": {
     "description": "the user wants something examined, checked, verified, or evaluated"

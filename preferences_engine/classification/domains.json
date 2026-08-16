@@ -2,6 +2,9 @@
   "software": {
     "description": "apps, programming, AI models, APIs, developer tools, software, digital platforms"
   },
+  "git": {
+    "description": "version control, git commands, commits, branches, pull requests, pushes, merges, repositories"
+  },
   "infrastructure": {
     "description": "servers, cloud, VMs, deployment, hosting, networking, system infrastructure"
   },
