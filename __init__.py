@@ -13,22 +13,30 @@ to ``classifier.py``.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from functools import partial
 
 from preferences_engine.session import SessionManager
 from preferences_engine.pipeline import PreferencePipeline
+from preferences_engine.config import (
+    ALLOWED_MODELS,
+    ALLOWED_PROVIDERS,
+    CLASSIFIER_MODEL,
+    CLASSIFIER_PROVIDER,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def register(ctx: Any) -> None:
-    session_manager = SessionManager()
-    pipeline = PreferencePipeline()
+    pl = PreferencePipeline()
 
-    ctx.register_hook("on_session_start", partial(on_session_start, session_manager))
-    ctx.register_hook("on_session_end", partial(on_session_end, session_manager))
-    ctx.register_hook("on_session_finalize", partial(on_session_finalize, session_manager))
-    ctx.register_hook("on_session_reset", partial(on_session_reset, session_manager))
-    ctx.register_hook("pre_llm_call", partial(pre_llm_call, ctx, pipeline))
+    ctx.register_hook("on_session_start", partial(on_session_start, pl.session_manager))
+    ctx.register_hook("on_session_end", partial(on_session_end, pl.session_manager))
+    ctx.register_hook("on_session_finalize", partial(on_session_finalize, pl.session_manager))
+    ctx.register_hook("on_session_reset", partial(on_session_reset, pl.session_manager))
+    ctx.register_hook("pre_llm_call", partial(pre_llm_call, ctx, pl))
 
 
 def on_session_start(
@@ -79,15 +87,36 @@ def pre_llm_call(
     if not user_message:
         return None
 
-    classifier_model = None
-    classifier_provider = None
+    # The hook is a leaf: it must NEVER raise, or it takes the whole agent turn
+    # down with it. Preferences are hints, not requirements — on any failure we
+    # inject nothing and let the agent answer unmodified.
+    try:
+        # Reconcile: if the current turn's session id differs from what we hold,
+        # self-heal by re-initialising state for the new session before injecting.
+        pipeline.session_manager.ensure_session(
+            kwargs.get("session_id"),
+            kwargs.get("model"),
+            kwargs.get("platform"),
+        )
 
-    result = pipeline.preference_pipeline(
-        ctx=ctx,
-        user_message=user_message,
-        classifier_model=classifier_model,
-        classifier_provider=classifier_provider,
-        **kwargs
-    )
+        # Classifier model/provider selection. Precedence:
+        #   1. our explicit knob (plugins.entries.prefr.model / .provider)
+        #   2. fall back to allowed[0] (first allowlisted entry)
+        #   3. else None -> host default
+        # Hermes enforces the chosen value must be in allowed_models / allowed_providers.
+        classifier_model = CLASSIFIER_MODEL or (ALLOWED_MODELS[0] if ALLOWED_MODELS else None)
+        classifier_provider = CLASSIFIER_PROVIDER or (ALLOWED_PROVIDERS[0] if ALLOWED_PROVIDERS else None)
+
+        result = pipeline.preference_pipeline(
+            ctx=ctx,
+            user_message=user_message,
+            session_id=kwargs.get("session_id"),
+            classifier_model=classifier_model,
+            classifier_provider=classifier_provider,
+            **kwargs
+        )
+    except Exception:
+        logger.exception("prefr pre_llm_call failed; injecting nothing")
+        return None
 
     return {"context": result} if result else None

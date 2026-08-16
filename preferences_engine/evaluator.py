@@ -9,7 +9,7 @@ import yaml  # pip install pyyaml
 from preferences_engine.config import POLICIES
 
 MAX_PREFERENCES = 6
-MIN_SCORE = 100
+MIN_SCORE = 60
 
 
 class PreferenceEvaluator:
@@ -57,9 +57,9 @@ class PreferenceEvaluator:
     def _map_weight(self, score: float) -> str:
         if score >= 160:
             return "HIGH"
-        elif score >= 130:
+        elif score >= 120:
             return "MEDIUM"
-        elif score >= 100:
+        elif score >= 80:
             return "LOW"
         return "DROP"
 

@@ -1,0 +1,17 @@
+{
+    "type": "object",
+    "properties": {
+        "needs_policy": {"type": "boolean", "default": false},
+        "classifier_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.0},
+        "domains": {
+            "type": "array",
+            "items": {"type": "string"},
+            "default": []
+        },
+        "interaction_mode": {
+            "type": "string",
+            "default": ""
+        }
+    },
+    "required": ["needs_policy", "classifier_confidence", "domains", "interaction_mode"]
+}

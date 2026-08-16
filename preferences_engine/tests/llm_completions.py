@@ -11,7 +11,7 @@ from preferences_engine.prompt import CLASSIFIER_PROMPT
 
 
 def load_schema() -> dict:
-    path = Path(__file__).resolve().parent.parent / "schemas" / "CLASSIFY_SCHEMA.json"
+    path = Path(__file__).resolve().parent.parent / "classification" / "CLASSIFY_SCHEMA.json"
 
     with path.open("r", encoding="utf-8") as file:
         return json.load(file)
