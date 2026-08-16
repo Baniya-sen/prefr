@@ -60,7 +60,11 @@ class PreferencePipeline:
         if not abstracted:
             return ""
 
-        return self.formatter.format(abstracted, referenced)
+        return self.formatter.format(
+            abstracted,
+            referenced,
+            classification.get("interaction_mode", ""),
+        )
 
     def _build_user_window(
             self,

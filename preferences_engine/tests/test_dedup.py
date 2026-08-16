@@ -138,7 +138,7 @@ class TestDetectCompaction(unittest.TestCase):
 class TestFormatterMethod(unittest.TestCase):
     def test_full_when_no_referenced(self):
         out = PreferenceFormatter().format([_policy("local_first")], [])
-        self.assertIn("<prefr-injection method='full'>", out)
+        self.assertIn("<prefr-injection mode='' method='full'>", out)
         self.assertNotIn("still relevant", out)
         self.assertIn("</prefr-injection>", out)
 
@@ -146,7 +146,7 @@ class TestFormatterMethod(unittest.TestCase):
         out = PreferenceFormatter().format(
             [_policy("privacy_first")], ["local_first"]
         )
-        self.assertIn("<prefr-injection method='compact'>", out)
+        self.assertIn("<prefr-injection mode='' method='compact'>", out)
         self.assertIn("still relevant", out)
         self.assertIn("local_first", out)
         self.assertIn("</prefr-injection>", out)

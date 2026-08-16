@@ -32,6 +32,14 @@ class TestFormatBlock(unittest.TestCase):
         self.assertTrue(out.startswith("<prefr-injection"))
         self.assertTrue(out.endswith("</prefr-injection>"))
 
+    def test_interaction_mode_attribute(self):
+        out = PreferenceFormatter().format([_policy()], interaction_mode="decide")
+        self.assertTrue(out.startswith("<prefr-injection mode='decide' method='full'>"))
+
+    def test_default_mode_is_empty(self):
+        out = PreferenceFormatter().format([_policy()])
+        self.assertTrue(out.startswith("<prefr-injection mode='' method='full'>"))
+
 
 class TestFormatPolicy(unittest.TestCase):
     def test_weight_id_and_body(self):
