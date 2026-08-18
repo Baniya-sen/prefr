@@ -13,6 +13,15 @@ to ``classifier.py``.
 
 from __future__ import annotations
 
+import os
+import sys
+
+# Hermes loads this plugin via importlib WITHOUT adding the plugin dir to
+# sys.path (see hermes_cli/plugins.py:_load_directory_module), so the absolute
+# `from preferences_engine.*` imports below would fail. Make our own dir
+# importable first.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import logging
 from typing import Any
 from functools import partial
