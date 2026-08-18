@@ -22,6 +22,8 @@ from preferences_engine.pipeline import PreferencePipeline
 from preferences_engine.config import (
     ALLOWED_MODELS,
     ALLOWED_PROVIDERS,
+    ALLOW_MODEL_OVERRIDE,
+    ALLOW_PROVIDER_OVERRIDE,
     CLASSIFIER_MODEL,
     CLASSIFIER_PROVIDER,
 )
@@ -103,9 +105,30 @@ def pre_llm_call(
         #   1. our explicit knob (plugins.entries.prefr.model / .provider)
         #   2. fall back to allowed[0] (first allowlisted entry)
         #   3. else None -> host default
-        # Hermes enforces the chosen value must be in allowed_models / allowed_providers.
+        # Hermes gates any override behind allow_model_override /
+        # allow_provider_override (default false) and only then consults the
+        # allowed_models / allowed_providers allowlists.
         classifier_model = CLASSIFIER_MODEL or (ALLOWED_MODELS[0] if ALLOWED_MODELS else None)
         classifier_provider = CLASSIFIER_PROVIDER or (ALLOWED_PROVIDERS[0] if ALLOWED_PROVIDERS else None)
+
+        # Fail-loud: if we've selected a model/provider override but its trust
+        # gate is still closed, Hermes raises PluginLlmTrustError, which the
+        # try/except below swallows -> silent no-inject. Log so the operator
+        # knows exactly why nothing is being injected.
+        if classifier_model and not ALLOW_MODEL_OVERRIDE:
+            logger.error(
+                "prefr: classifier model override %r requested but "
+                "plugins.entries.prefr.llm.allow_model_override is false — "
+                "Hermes will deny the call. Set it true (hermes config set).",
+                classifier_model,
+            )
+        if classifier_provider and not ALLOW_PROVIDER_OVERRIDE:
+            logger.error(
+                "prefr: classifier provider override %r requested but "
+                "plugins.entries.prefr.llm.allow_provider_override is false — "
+                "Hermes will deny the call. Set it true (hermes config set).",
+                classifier_provider,
+            )
 
         result = pipeline.preference_pipeline(
             ctx=ctx,

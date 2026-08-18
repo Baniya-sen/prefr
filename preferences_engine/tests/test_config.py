@@ -36,6 +36,10 @@ class TestConfigDefaults(unittest.TestCase):
         self.assertIsNone(self.cfg.CLASSIFIER_MODEL)
         self.assertIsNone(self.cfg.CLASSIFIER_PROVIDER)
 
+    def test_gate_booleans_default_false(self):
+        self.assertFalse(self.cfg.ALLOW_MODEL_OVERRIDE)
+        self.assertFalse(self.cfg.ALLOW_PROVIDER_OVERRIDE)
+
 
 class TestConfigOverride(unittest.TestCase):
     def setUp(self):
@@ -75,6 +79,41 @@ class TestConfigOverride(unittest.TestCase):
     def test_explicit_model_provider_override(self):
         self.assertEqual(self.cfg.CLASSIFIER_MODEL, "deepseek-v4-flash")
         self.assertEqual(self.cfg.CLASSIFIER_PROVIDER, "opencode-go")
+
+
+class TestConfigGateBooleans(unittest.TestCase):
+    def test_gate_booleans_true_when_set(self):
+        patcher = mock.patch(
+            "hermes_cli.config.load_config",
+            return_value={
+                "plugins": {
+                    "entries": {
+                        "prefr": {
+                            "llm": {
+                                "allow_model_override": True,
+                                "allow_provider_override": True,
+                            },
+                        }
+                    }
+                }
+            },
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        cfg = importlib.reload(config_mod)
+        self.assertTrue(cfg.ALLOW_MODEL_OVERRIDE)
+        self.assertTrue(cfg.ALLOW_PROVIDER_OVERRIDE)
+
+    def test_gate_booleans_false_when_absent(self):
+        patcher = mock.patch(
+            "hermes_cli.config.load_config",
+            return_value={"plugins": {"entries": {"prefr": {"llm": {}}}}},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        cfg = importlib.reload(config_mod)
+        self.assertFalse(cfg.ALLOW_MODEL_OVERRIDE)
+        self.assertFalse(cfg.ALLOW_PROVIDER_OVERRIDE)
 
 
 class TestClassifierFallback(unittest.TestCase):

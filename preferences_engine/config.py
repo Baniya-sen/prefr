@@ -37,12 +37,17 @@ REFLECTOR_TEMPERATURE = 0.6
 # previous, etc.). Override: plugins.entries.prefr.window
 INJECTION_WINDOW = int(_entry.get("window", 1))
 
-# Classifier model/provider allowlists. These double as the Hermes trust gate:
-# Hermes only permits a custom model/provider in a structured call when it is
-# listed here (plugins.entries.prefr.llm.allowed_models / allowed_providers).
-# Empty = no override -> the classifier runs on the host default (None).
+# Classifier model/provider allowlists. These are consulted ONLY AFTER the
+# trust-gate booleans below are opened; they do NOT gate access by themselves.
+# Empty = no allowlist filtering (any value passes, subject to the gate).
 ALLOWED_MODELS = list(_llm.get("allowed_models") or [])
 ALLOWED_PROVIDERS = list(_llm.get("allowed_providers") or [])
+
+# The actual Hermes trust gate. Hermes raises PluginLlmTrustError (swallowed by
+# our fail-closed hook -> silent no-inject) unless the matching boolean is true
+# when we request a model/provider override. Both default false (Hermes default).
+ALLOW_MODEL_OVERRIDE = bool(_llm.get("allow_model_override", False))
+ALLOW_PROVIDER_OVERRIDE = bool(_llm.get("allow_provider_override", False))
 
 # Our own selection: which model/provider the classifier actually runs on.
 # Independent of the allowlist. When unset, falls back to allowed[0] (the

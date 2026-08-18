@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from preferences_engine.classifier import (
     _DEFAULT,
     _normalize,
-    _parse_json,
+    parse_json,
     _to_bool,
     _to_confidence,
     classify,
@@ -87,19 +87,19 @@ class TestClassifyParsesTextJson(unittest.TestCase):
 
 class TestParseJson(unittest.TestCase):
     def test_plain_json(self):
-        self.assertEqual(_parse_json('{"a": 1}'), {"a": 1})
+        self.assertEqual(parse_json('{"a": 1}'), {"a": 1})
 
     def test_garbage_returns_none(self):
-        self.assertIsNone(_parse_json("not json at all"))
+        self.assertIsNone(parse_json("not json at all"))
 
     def test_empty_returns_none(self):
-        self.assertIsNone(_parse_json(""))
+        self.assertIsNone(parse_json(""))
 
     def test_fenced_json_strips_fences(self):
-        self.assertEqual(_parse_json('```json\n{"a": 1}\n```'), {"a": 1})
+        self.assertEqual(parse_json('```json\n{"a": 1}\n```'), {"a": 1})
 
     def test_fenced_garbage_returns_none(self):
-        self.assertIsNone(_parse_json("```json\nthis is not json\n```"))
+        self.assertIsNone(parse_json("```json\nthis is not json\n```"))
 
 
 class TestToBool(unittest.TestCase):
