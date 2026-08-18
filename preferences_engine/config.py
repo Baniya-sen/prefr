@@ -31,6 +31,7 @@ _llm = _entry.get("llm") or {}
 
 # Classifier LLM temperature. Override: plugins.entries.prefr.temperature
 TEMPERATURE = float(_entry.get("temperature", 0.1))
+REFLECTOR_TEMPERATURE = 0.6
 
 # Number of user messages the classifier sees (1 = current only, 2 = current +
 # previous, etc.). Override: plugins.entries.prefr.window
@@ -49,14 +50,17 @@ ALLOWED_PROVIDERS = list(_llm.get("allowed_providers") or [])
 CLASSIFIER_MODEL = _entry.get("model") or None
 CLASSIFIER_PROVIDER = _entry.get("provider") or None
 
+REFLECTION_TURN_COUNT = 15
+
 MAX_TOKENS = 64
 PURPOSE = "prefr.classifier"
+REFLECTOR_PURPOSE = "prefr.reflection"
 
 # ------------------------------------------------------------------
 # Runtime
 # ------------------------------------------------------------------
 
-REQUEST_TIMEOUT = 5
+REQUEST_TIMEOUT = 8
 
 # ------------------------------------------------------------------
 # Files

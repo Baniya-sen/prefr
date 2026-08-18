@@ -61,7 +61,7 @@ def classify(result: Any) -> dict[str, Any]:
     text = getattr(result, "text", None)
 
     if isinstance(text, str):
-        parsed = _parse_json(text)
+        parsed = parse_json(text)
 
         if isinstance(parsed, dict):
             return _normalize(parsed)
@@ -69,7 +69,7 @@ def classify(result: Any) -> dict[str, Any]:
     return dict(_DEFAULT)
 
 
-def _parse_json(text: str) -> Any:
+def parse_json(text: str) -> Any:
     text = text.strip()
 
     if not text:

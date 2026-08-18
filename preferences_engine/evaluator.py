@@ -119,6 +119,7 @@ class PreferenceEvaluator:
                     score = self._compute_score(rel, domains)
                     related.append((score, rel))
                     frontier.append((rel_id, hop + 1))
+
         related.sort(key=lambda x: x[0], reverse=True)
 
         # Direct matches first, then related (secondary).
