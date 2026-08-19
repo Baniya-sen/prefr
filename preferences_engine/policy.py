@@ -30,20 +30,22 @@ def view_policies(request: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for policy in _load_policies()
     }
 
-    done = set()
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
 
-    requested_id = [
-        item.get("id") and done.add(item.get("id"))
-        for item in request
-        if item.get("id") not in done
-    ]
+    for item in request:
+        if not isinstance(item, dict):
+            continue
+        policy_id = item.get("id")
+        if not policy_id or policy_id in seen:
+            continue
+        seen.add(policy_id)
+        if policy_id in policy_by_id:
+            result.append(policy_by_id[policy_id])
+        else:
+            result.append({"id": policy_id, "found": False})
 
-    return [
-        policy_by_id[policy_id]
-        if policy_id in policy_by_id else
-        {policy_id: "No policy found with this id!"}
-        for policy_id in requested_id
-    ]
+    return result
 
 
 def update_policies(request: list[dict[str, Any]]) -> None:
