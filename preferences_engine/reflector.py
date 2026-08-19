@@ -114,6 +114,10 @@ class Reflector:
         if not isinstance(request, list):
             return Operation(method=OperationMethod.EXIT, request=[])
 
+        for query in request:
+            if not isinstance(query, dict):
+                return Operation(method=OperationMethod.EXIT, request=[])
+
         return Operation(
             method=method,
             request=request,
