@@ -1,0 +1,101 @@
+{
+  "type": "object",
+  "required": ["method", "request"],
+  "properties": {
+    "method": {
+      "type": "string",
+      "enum": [
+        "view",
+        "update",
+        "archive",
+        "create",
+        "exit"
+      ],
+      "description": "The operation to perform. Use view to inspect current policies, update to modify existing policies, archive to retire policies, create to add new policies, and exit when reflection is complete."
+    },
+    "request": {
+      "type": "array",
+      "description": "A list of requests for the selected operation. Multiple policies may be handled in one operation. For exit, this must be an empty array.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The policy identifier. For update, view, and archive this identifies the existing policy. For create, this is the new unique policy identifier. For update, the identifier may also be changed when the policy's identity should be improved; the resulting identifier must remain globally unique."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "A concise human-readable name for the preference."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "The durable preference expressed as a concise, reusable imperative instruction. It must describe general decision intent rather than implementation details."
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "How strongly the preference defines the user's decision style. Change only when evidence supports a different importance."
+          },
+          "applies_to": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "Domains where this preference applies. Use only domains supplied by the system. Changes to applicability require strong evidence."
+          },
+          "primary_domain": {
+            "type": "string",
+            "description": "The single domain most specifically targeted by the preference. Use only a supplied domain."
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of other preferences that provide contextual exceptions or overrides. These are informational relationships, not executable logic."
+          },
+          "related": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of preferences with similar or overlapping decision intent. This is a non-hierarchical relationship used for grouping and deduplication."
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "positive_observations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Observation IDs that provide positive evidence for this preference."
+              },
+              "negative_observations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Observation IDs that provide negative or contradictory evidence for this preference."
+              }
+            },
+            "required": [
+              "positive_observations",
+              "negative_observations"
+            ],
+            "description": "New evidence observations associated with the policy. Evidence counts and confidence are derived by the policy engine."
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
