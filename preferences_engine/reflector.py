@@ -57,8 +57,7 @@ class Reflector:
             OperationMethod.CREATE: create_new_policies,
         }
 
-        handler = handlers[operation.method]
-        handler(operation.request)
+        policies_data = handlers[operation.method](operation.request)
 
     def check_reflection_loop(
         self,
