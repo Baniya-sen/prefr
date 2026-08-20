@@ -49,7 +49,7 @@ class Reflector:
 
         handlers: dict[
             OperationMethod,
-            Callable[[list[dict[str, Any]]], None],
+            Callable[[list[dict[str, Any]]]],
         ] = {
             OperationMethod.VIEW: view_policies,
             OperationMethod.UPDATE: update_policies,
