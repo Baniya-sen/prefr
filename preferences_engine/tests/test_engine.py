@@ -70,7 +70,8 @@ class TestPromptFreeze(unittest.TestCase):
         # so each test starts from a clean slate.
         import preferences_engine.prompt as P
         P._frozen_session_id = None
-        P._frozen_prompt = None
+        P._frozen_classification_prompt = None
+        P._frozen_reflection_prompt = None
 
     def test_freeze_rebuilds_on_session_change(self):
         from preferences_engine.prompt import get_prompt
@@ -87,20 +88,28 @@ class TestPromptFreeze(unittest.TestCase):
         # Same session must return the exact same cached string (no rebuild).
         self.assertIs(get_prompt("session-x"), get_prompt("session-x"))
 
+    def test_reflection_kind_routes_to_reflection_prompt(self):
+        from preferences_engine.prompt import get_prompt
+        c = get_prompt("session-kind", "classification")
+        r = get_prompt("session-kind", "reflection")
+        self.assertNotEqual(c, r)
+        self.assertIn("CURRENT POLICIES", r)
+        self.assertNotIn("INTERACTION MODES", r)
+
     def test_same_session_does_not_rebuild(self):
         import preferences_engine.prompt as P
         calls = {"n": 0}
         orig = P.build_prompt
 
-        def fake_build():
+        def fake_build(kind="classification"):
             calls["n"] += 1
-            return orig()
+            return orig(kind)
 
         P.build_prompt = fake_build
         try:
-            P.get_prompt("session-freeze-a")   # first call -> builds once
+            P.get_prompt("session-freeze-a")   # first call -> builds both kinds
             P.get_prompt("session-freeze-a")   # same session -> no rebuild
-            self.assertEqual(calls["n"], 1)    # built exactly once
+            self.assertEqual(calls["n"], 2)    # built both kinds exactly once
         finally:
             P.build_prompt = orig
 
@@ -109,15 +118,15 @@ class TestPromptFreeze(unittest.TestCase):
         calls = {"n": 0}
         orig = P.build_prompt
 
-        def fake_build():
+        def fake_build(kind="classification"):
             calls["n"] += 1
-            return orig()
+            return orig(kind)
 
         P.build_prompt = fake_build
         try:
-            P.get_prompt("session-freeze-x")   # first session -> builds once
-            P.get_prompt("session-freeze-y")   # new session -> rebuilds
-            self.assertEqual(calls["n"], 2)    # built twice (once per session)
+            P.get_prompt("session-freeze-x")   # first session -> builds both
+            P.get_prompt("session-freeze-y")   # new session -> rebuilds both
+            self.assertEqual(calls["n"], 4)    # built both kinds twice
         finally:
             P.build_prompt = orig
 
