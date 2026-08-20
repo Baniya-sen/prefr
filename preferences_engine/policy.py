@@ -5,7 +5,7 @@ from typing import Any
 
 from preferences_engine.config import POLICIES
 
-type ResultPolicies = list[dict[str, Any]]
+ResultPolicies = list[dict[str, Any]]
 
 
 def _load_policies() -> ResultPolicies:
