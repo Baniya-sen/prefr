@@ -22,7 +22,7 @@ from preferences_engine.policy import (
     create_new_policies
 )
 
-type AgentInputType = list[dict[str, Any]]
+AgentInputType = list[dict[str, Any]]
 
 
 class OperationMethod(StrEnum):
@@ -47,8 +47,8 @@ class Reflector:
 
         self._get_prompt()
 
-    def _get_prompt(self) -> None:
-        self._system_prompt = get_prompt("reflection")
+    def _get_prompt(self, session_id: str | None = None) -> None:
+        self._system_prompt = get_prompt(session_id, "reflection")
 
     def check_reflection_loop(
         self,
@@ -63,6 +63,8 @@ class Reflector:
         if self._session.turn_count <= REFLECTION_TURN_COUNT:
             return
 
+        self._get_prompt(session.session_id)
+
         main_chat_history: AgentInputType = kwargs.get("conversation_history")
         if not main_chat_history or len(main_chat_history) < self._turn_count:
             return
@@ -70,7 +72,7 @@ class Reflector:
         history_transcript = self._render_transcript(main_chat_history)
         agent_turns: AgentInputType = []
 
-        for _ in MAX_REFLECTION_STEPS:
+        for _ in range(MAX_REFLECTION_STEPS):
             input_blocks = self._dialogue_to_blocks(agent_turns)
             agent_choice = self._call_reflection_agent(
                 ctx,
@@ -100,13 +102,31 @@ class Reflector:
         content = ""
 
         for turn in conversation_history:
+            if not isinstance(turn, dict):
+                continue
             active = turn.get("role")
-            if active == "user":
-                content += "USER: " + turn.get("content") + "\n"
-            elif active == "assistant":
-                content += "ASSISTANT: " + turn.get("content") + "\n"
+            if active not in ("user", "assistant"):
+                continue
+            label = "USER" if active == "user" else "ASSISTANT"
+            content += f"{label}: {self._content_to_text(turn.get('content'))}\n"
 
         return header + content + "\n\n" + "End of current conversation."
+
+    def _content_to_text(self, content: Any) -> str:
+        """Normalize a message content (str or multimodal block list) to text."""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: list[str] = []
+            for block in content:
+                if isinstance(block, dict):
+                    text = block.get("text")
+                    if isinstance(text, str):
+                        parts.append(text)
+                elif isinstance(block, str):
+                    parts.append(block)
+            return "\n".join(parts)
+        return str(content) if content is not None else ""
 
     def _dialogue_to_blocks(self, agents_turn: AgentInputType) -> AgentInputType:
         if not agents_turn:
@@ -126,7 +146,7 @@ class Reflector:
         per_turn_instruct = ("Review the conversation and maintain the policy library."
                              "Return exactly one operation (view/update/create/archive/exit).")
 
-        return ctx.llm.complete_structured(
+        result = ctx.llm.complete_structured(
             instructions=per_turn_instruct,
             system_prompt=system_prompt_and_history,
             json_mode=True,
@@ -137,10 +157,20 @@ class Reflector:
             model=classifier_model,
         )
 
+        text = getattr(result, "text", None)
+        return text if isinstance(text, str) else ""
+
     def _parse_agents_choice(self, agents_turn: str) -> Operation:
         raw = parse_json(agents_turn)
 
-        method = OperationMethod(raw["method"])
+        if not isinstance(raw, dict):
+            return Operation(method=OperationMethod.EXIT, request=[])
+
+        try:
+            method = OperationMethod(str(raw.get("method", "")))
+        except ValueError:
+            return Operation(method=OperationMethod.EXIT, request=[])
+
         request = raw.get("request", [])
 
         if not isinstance(request, list):
