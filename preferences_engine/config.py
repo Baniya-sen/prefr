@@ -56,6 +56,7 @@ CLASSIFIER_MODEL = _entry.get("model") or None
 CLASSIFIER_PROVIDER = _entry.get("provider") or None
 
 REFLECTION_TURN_COUNT = 15
+MAX_REFLECTION_STEPS = 16
 
 MAX_TOKENS = 64
 PURPOSE = "prefr.classifier"

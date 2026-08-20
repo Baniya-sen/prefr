@@ -226,4 +226,5 @@ def get_prompt(session_id: str | None, kind: str = "classification") -> str:
 
     if kind == "reflection":
         return _frozen_reflection_prompt
+
     return _frozen_classification_prompt

@@ -73,6 +73,9 @@ class PreferencePipeline:
             window: int = INJECTION_WINDOW,
     ) -> list[str]:
         """Return the last `window` user messages, ending with current."""
+        if window == 1:
+            return [current_message]
+
         prior: list[str] = []
 
         for msg in conversation_history or []:
