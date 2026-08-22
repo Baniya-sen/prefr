@@ -487,6 +487,23 @@ def make_ctx(*, plugin_id: str = "prefr") -> PluginContext:
     return PluginContext(plugin_id=plugin_id)
 
 
+def load_example_session() -> List[Dict[str, Any]]:
+    """Load the generated example session (a real Hermes session transcript)
+    from temp/generated_example_session.json and return it as conversation
+    history. Falls back to [] if the file is missing or malformed."""
+    path = ROOT / "temp" / "generated_example_session.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(data, list):
+        return []
+    return [
+        m for m in data
+        if isinstance(m, dict) and "role" in m and "content" in m
+    ]
+
+
 def main() -> None:
     import importlib.util
 
@@ -508,6 +525,12 @@ def main() -> None:
     print("Prefr Hermes adapter ready.")
     print("Type /exit to quit.\n")
 
+    # Session identity + running conversation history, so the pre_llm_call hook
+    # (and, via it, the reflection loop) has the same inputs Hermes would pass.
+    # Seed the history from the generated example session (a real transcript).
+    session_id = "adapter-test-session"
+    conversation_history: List[Dict[str, Any]] = load_example_session()
+
     while True:
         user_message = input("User: ")
 
@@ -517,6 +540,15 @@ def main() -> None:
         result = ctx.run_hook(
             "pre_llm_call",
             user_message=user_message,
+            session_id=session_id,
+            model="adapter-test-model",
+            platform="adapter",
+            conversation_history=list(conversation_history),
+        )
+
+        conversation_history.append({"role": "user", "content": user_message})
+        conversation_history.append(
+            {"role": "assistant", "content": "<adapter assistant reply>"}
         )
 
         print("\nPrefr:")
