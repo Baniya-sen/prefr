@@ -123,6 +123,10 @@ def _render_reflection_schema(schema: dict[str, Any]) -> str:
         if enum:
             lines.append(f"- method: one of {', '.join(enum)}")
 
+    reason = props.get("reason", {})
+    if isinstance(reason, dict):
+        lines.append("- reason (optional): a short explanation of the operation, e.g. why reflection is exiting.")
+
     request = props.get("request", {})
     items = request.get("items", {}) if isinstance(request, dict) else {}
     item_props = items.get("properties", {}) if isinstance(items, dict) else {}
