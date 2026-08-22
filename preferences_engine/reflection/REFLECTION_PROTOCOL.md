@@ -160,11 +160,14 @@ Use `exit` when no further meaningful policy work remains.
 
 `request` must be an empty list.
 
+Optionally include a `reason` string explaining why reflection is stopping.
+
 Example:
 
 {
   "method": "exit",
-  "request": []
+  "request": [],
+  "reason": "No preferences found."
 }
 
 ---

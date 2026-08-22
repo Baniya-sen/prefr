@@ -13,6 +13,10 @@
       ],
       "description": "The operation to perform. Use view to inspect current policies, update to modify existing policies, archive to retire policies, create to add new policies, and exit when reflection is complete."
     },
+    "reason": {
+      "type": "string",
+      "description": "Optional short explanation of the operation. Use it with exit to say why reflection is stopping (e.g. no preferences found, all changes complete)."
+    },
     "request": {
       "type": "array",
       "description": "A list of requests for the selected operation. Multiple policies may be handled in one operation. For exit, this must be an empty array.",

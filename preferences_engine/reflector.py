@@ -1,4 +1,5 @@
 import json
+import logging
 
 from typing import Any
 from enum import StrEnum
@@ -24,6 +25,8 @@ from preferences_engine.policy import (
 
 AgentInputType = list[dict[str, Any]]
 
+logger = logging.getLogger(__name__)
+
 
 class OperationMethod(StrEnum):
     VIEW = "view"
@@ -37,6 +40,7 @@ class OperationMethod(StrEnum):
 class Operation:
     method: OperationMethod
     request: list[dict[str, Any]]
+    reason: str = ""
 
 
 class Reflector:
@@ -84,6 +88,10 @@ class Reflector:
 
             operation = self._parse_agents_choice(agent_choice)
             if operation.method == OperationMethod.EXIT:
+                logger.info(
+                    "prefr reflection exited: %s",
+                    operation.reason or "(no reason given)",
+                )
                 break
 
             policies_to_agents = self._handle_operation(operation)
@@ -180,9 +188,14 @@ class Reflector:
             if not isinstance(query, dict):
                 return Operation(method=OperationMethod.EXIT, request=[])
 
+        reason = raw.get("reason", "")
+        if not isinstance(reason, str):
+            reason = ""
+
         return Operation(
             method=method,
             request=request,
+            reason=reason,
         )
 
     def _handle_operation(self, operation: Operation) -> ResultPolicies:
