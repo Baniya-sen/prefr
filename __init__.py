@@ -28,6 +28,7 @@ from functools import partial
 
 from preferences_engine.session import SessionManager
 from preferences_engine.pipeline import PreferencePipeline
+from preferences_engine.reflector import Reflector
 from preferences_engine.config import (
     ALLOWED_MODELS,
     ALLOWED_PROVIDERS,
@@ -42,12 +43,13 @@ logger = logging.getLogger(__name__)
 
 def register(ctx: Any) -> None:
     pl = PreferencePipeline()
+    reflector = Reflector()
 
     ctx.register_hook("on_session_start", partial(on_session_start, pl.session_manager))
     ctx.register_hook("on_session_end", partial(on_session_end, pl.session_manager))
     ctx.register_hook("on_session_finalize", partial(on_session_finalize, pl.session_manager))
     ctx.register_hook("on_session_reset", partial(on_session_reset, pl.session_manager))
-    ctx.register_hook("pre_llm_call", partial(pre_llm_call, ctx, pl))
+    ctx.register_hook("pre_llm_call", partial(pre_llm_call, ctx, pl, reflector))
 
 
 def on_session_start(
@@ -92,6 +94,7 @@ def on_session_reset(
 def pre_llm_call(
         ctx: Any,
         pipeline: PreferencePipeline,
+        reflector: Reflector,
         user_message: str | None = None,
         **kwargs: Any
 ) -> dict[str, str] | None:
@@ -147,6 +150,20 @@ def pre_llm_call(
             classifier_provider=classifier_provider,
             **kwargs
         )
+
+        # Reflection (Phase 2) — best-effort, runs after injection. It must
+        # never drop an already-computed injection block, so its failures are
+        # isolated here rather than handled by the outer fail-closed guard.
+        try:
+            reflector.check_reflection_loop(
+                ctx=ctx,
+                session=pipeline.session_manager.session,
+                classifier_provider=classifier_provider,
+                classifier_model=classifier_model,
+                **kwargs,
+            )
+        except Exception:
+            logger.exception("prefr reflection check failed")
     except Exception:
         logger.exception("prefr pre_llm_call failed; injecting nothing")
         return None
