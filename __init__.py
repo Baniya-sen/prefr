@@ -161,9 +161,12 @@ def pre_llm_call(
                 classifier_model=classifier_model,
                 **kwargs,
             )
-        except Exception:
+        except Exception as e:
+            print("Error:", e)
             logger.exception("prefr reflection check failed")
-    except Exception:
+
+    except Exception as e:
+        print("Error:", e)
         logger.exception("prefr pre_llm_call failed; injecting nothing")
         return None
 

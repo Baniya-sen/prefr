@@ -85,6 +85,7 @@ class Reflector:
                 classifier_provider,
                 classifier_model,
             )
+            print("agent_choice- ", agent_choice)
 
             operation = self._parse_agents_choice(agent_choice)
             if operation.method == OperationMethod.EXIT:
@@ -95,6 +96,7 @@ class Reflector:
                 break
 
             policies_to_agents = self._handle_operation(operation)
+            print("policies_to_agents: ", policies_to_agents)
 
             agent_turns.append({
                 "role": "assistant",
@@ -102,7 +104,7 @@ class Reflector:
             })
             agent_turns.append({
                 "role": "tool",
-                "content": json.dumps(policies_to_agents)
+                "content": json.dumps(policies_to_agents, default=str)
             })
 
     def _render_transcript(self, conversation_history: AgentInputType) -> str:

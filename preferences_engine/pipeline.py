@@ -23,7 +23,6 @@ class PreferencePipeline:
             *,
             ctx: Any,
             user_message: str,
-            session_id: str | None = None,
             classifier_model: str | None = None,
             classifier_provider: str | None = None,
             **kwargs: Any
@@ -32,7 +31,7 @@ class PreferencePipeline:
         # shrink clears already-injected state before we classify/dedup.
         self.session_manager.detect_compaction(kwargs.get("conversation_history"))
 
-        system_prompt = get_prompt(session_id)
+        system_prompt = get_prompt(kwargs.get("session_id", None))
         user_messages = self._build_user_window(
             kwargs.get("conversation_history"),
             user_message,
@@ -48,6 +47,7 @@ class PreferencePipeline:
         )
 
         classification = classify(llm_classify_result)
+        print("classification", classification)
 
         # Early return: nothing policy-relevant → no injection, no session write.
         if not classification.get("needs_policy", False):
