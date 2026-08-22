@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextvars
 import logging
 import threading
 from typing import Any
@@ -99,6 +100,14 @@ class PreferencePipeline:
             self._reflection_lock.release()
             return
 
+        # Capture the current context so the background thread inherits the
+        # main turn's runtime. Hermes stores the active provider/model/api_key
+        # in a ContextVar (`_RUNTIME_MAIN_CONTEXT`) that does NOT propagate to
+        # a plain threading.Thread; without this the plugin LLM call in the
+        # background would resolve with an empty runtime and fail (or silently
+        # lose auth) for the default/custom/OAuth provider paths.
+        ctx_copy = contextvars.copy_context()
+
         def _run() -> None:
             try:
                 self.reflector.check_reflection_loop(
@@ -114,7 +123,9 @@ class PreferencePipeline:
                 self._reflection_lock.release()
 
         threading.Thread(
-            target=_run, name="prefr-reflection", daemon=True
+            target=lambda: ctx_copy.run(_run),
+            name="prefr-reflection",
+            daemon=True,
         ).start()
 
     def _build_user_window(
