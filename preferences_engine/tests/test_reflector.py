@@ -83,6 +83,23 @@ class TestParseAgentsChoice(_Base):
         op = self.reflector._parse_agents_choice('{"method": "view", "request": [42]}')
         self.assertEqual(op.method, OperationMethod.EXIT)
 
+    def test_reason_extracted(self):
+        op = self.reflector._parse_agents_choice(
+            '{"method": "exit", "request": [], "reason": "No preferences found."}'
+        )
+        self.assertEqual(op.method, OperationMethod.EXIT)
+        self.assertEqual(op.reason, "No preferences found.")
+
+    def test_reason_missing_defaults_empty(self):
+        op = self.reflector._parse_agents_choice('{"method": "exit", "request": []}')
+        self.assertEqual(op.reason, "")
+
+    def test_reason_non_string_ignored(self):
+        op = self.reflector._parse_agents_choice(
+            '{"method": "exit", "request": [], "reason": 42}'
+        )
+        self.assertEqual(op.reason, "")
+
 
 class TestRenderTranscript(_Base):
     def test_renders_user_and_assistant(self):
@@ -234,6 +251,45 @@ class TestReflectionLoop(_Base):
             )
         # After the scripted view, the fake LLM emits a default exit.
         self.assertEqual(len(llm.calls), 2)
+
+    def test_policy_with_date_serializes(self):
+        # Regression: policy YAML dates parse into datetime.date, which plain
+        # json.dumps rejects. The loop must serialize them via default=str.
+        import datetime
+
+        ctx, llm = _ctx(
+            [
+                '{"method": "view", "request": [{"id": "local_first"}]}',
+                '{"method": "exit", "request": []}',
+            ]
+        )
+        session = Session(session_id="s1", turn_count=16)
+        dated_policy = {
+            "id": "local_first",
+            "title": "Prefer local-first",
+            "created_at": datetime.date(2026, 8, 10),
+        }
+        with mock.patch(
+            "preferences_engine.reflector.view_policies",
+            return_value=[dated_policy],
+        ):
+            self.reflector.check_reflection_loop(
+                ctx, session, conversation_history=[{"role": "user", "content": "hi"}]
+            )
+        # No TypeError raised means default=str handled the date objects.
+        self.assertEqual(len(llm.calls), 2)
+
+    def test_exit_reason_logged(self):
+        ctx, llm = _ctx(
+            ['{"method": "exit", "request": [], "reason": "No preferences found."}']
+        )
+        session = Session(session_id="s1", turn_count=16)
+        with mock.patch("preferences_engine.reflector.logger") as logger:
+            self.reflector.check_reflection_loop(
+                ctx, session, conversation_history=[{"role": "user", "content": "hi"}]
+            )
+        logger.info.assert_called()
+        self.assertIn("No preferences found.", str(logger.info.call_args))
 
 
 if __name__ == "__main__":
