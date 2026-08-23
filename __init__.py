@@ -35,9 +35,22 @@ from preferences_engine.config import (
     ALLOW_PROVIDER_OVERRIDE,
     CLASSIFIER_MODEL,
     CLASSIFIER_PROVIDER,
+    LOG_FILE,
 )
 
 logger = logging.getLogger(__name__)
+
+# File logging — set up at import time so every module's logger
+# (engine, pipeline, reflector) has a handler from the start.
+# Without this, errors from the background reflection thread
+# (which can fire before engine.start() runs) go to a handler-less
+# root logger and vanish.
+os.makedirs(os.path.dirname(str(LOG_FILE)), exist_ok=True)
+logging.basicConfig(
+    filename=str(LOG_FILE),
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 
 def register(ctx: Any) -> None:
@@ -147,7 +160,6 @@ def pre_llm_call(
             **kwargs
         )
     except Exception as e:
-        print("Error:", e)
         logger.exception("prefr pre_llm_call failed; injecting nothing")
         return None
 
