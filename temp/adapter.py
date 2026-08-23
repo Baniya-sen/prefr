@@ -132,6 +132,19 @@ def _resolve_provider(provider: Optional[str]) -> str:
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.+?)```", re.DOTALL | re.IGNORECASE)
 
 
+class AdapterProviderError(Exception):
+    """Provider-shaped HTTP failure for local error-path testing.
+
+    Prefr intentionally reads only ``exc.response.status_code`` at its LLM
+    boundary, so this emulates that portable contract without importing a
+    provider-specific SDK exception class.
+    """
+
+    def __init__(self, message: str, status_code: int) -> None:
+        super().__init__(message)
+        self.response = type("Response", (), {"status_code": status_code})()
+
+
 class PluginLlm:
     """Local stand-in for ``agent.plugin_llm.PluginLlm``.
 
@@ -154,6 +167,30 @@ class PluginLlm:
         self._default_model = model
         self._client: Optional[OpenAI] = None
         self._client_provider: Optional[str] = None
+        self._simulated_error: Optional[str] = None
+
+    def simulate_error(self, kind: str) -> None:
+        """Make the next ``complete_structured`` call raise a local failure.
+
+        ``timeout`` -> ``TimeoutError``; ``trust`` -> ``PermissionError``;
+        ``rate_limit`` / ``server`` -> provider-shaped HTTP errors (429 / 500).
+        The error is consumed after one call, so normal behavior resumes.
+        """
+        if kind not in {"timeout", "trust", "rate_limit", "server"}:
+            raise ValueError("error kind must be timeout, trust, rate_limit, or server")
+        self._simulated_error = kind
+
+    def _raise_simulated_error(self) -> None:
+        kind = self._simulated_error
+        self._simulated_error = None
+        if kind == "timeout":
+            raise TimeoutError("adapter simulated request timeout")
+        if kind == "trust":
+            raise PermissionError("adapter simulated plugin trust denial")
+        if kind == "rate_limit":
+            raise AdapterProviderError("adapter simulated rate limit", 429)
+        if kind == "server":
+            raise AdapterProviderError("adapter simulated provider error", 500)
 
     def _resolve_provider(self, provider: Optional[str]) -> str:
         return provider or self._provider or _resolve_provider(None)
@@ -266,6 +303,9 @@ class PluginLlm:
         if not input:
             raise ValueError("complete_structured requires at least one input block")
 
+        if self._simulated_error:
+            self._raise_simulated_error()
+
         eff_provider = self._resolve_provider(provider)
         eff_model = self._resolve_model(eff_provider, model)
 
@@ -293,6 +333,8 @@ class PluginLlm:
             kwargs["temperature"] = temperature
         if max_tokens is not None:
             kwargs["max_tokens"] = max_tokens
+        if timeout is not None:
+            kwargs["timeout"] = timeout
 
         response = self.client.chat.completions.create(**kwargs)
         text = self._extract_text(response)
@@ -523,7 +565,8 @@ def main() -> None:
     plugin.register(ctx)
 
     print("Prefr Hermes adapter ready.")
-    print("Type /exit to quit.\n")
+    print("Type /exit to quit. Use /error timeout|trust|rate_limit|server")
+    print("to make the next LLM call fail locally.\n")
 
     # Session identity + running conversation history, so the pre_llm_call hook
     # (and, via it, the reflection loop) has the same inputs Hermes would pass.
@@ -536,6 +579,16 @@ def main() -> None:
 
         if user_message == "/exit":
             break
+
+        if user_message.startswith("/error "):
+            kind = user_message.removeprefix("/error ").strip()
+            try:
+                ctx.llm.simulate_error(kind)
+            except ValueError as exc:
+                print(f"Error: {exc}\n")
+            else:
+                print(f"Next LLM call will simulate: {kind}\n")
+            continue
 
         result = ctx.run_hook(
             "pre_llm_call",
