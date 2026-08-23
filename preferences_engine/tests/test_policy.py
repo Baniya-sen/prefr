@@ -184,6 +184,7 @@ class TestCreatePolicies(PolicyCorpusTest):
         }])[0]
 
         self.assertEqual(out["replaced"], ["old"])
+        self.assertNotIn("replaced", self.load_policy("new"))
         self.assertFalse((self.policies / "old.yaml").exists())
         referrer = self.load_policy("referrer")
         self.assertEqual(referrer["related"], ["new"])

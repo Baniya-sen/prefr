@@ -150,7 +150,6 @@ created_by: manual | reflection
 created_at: YYYY-MM-DD
 updated_at: YYYY-MM-DD
 last_reviewed: YYYY-MM-DD
-replaced: [<preference_id>]   # optional engine provenance: ids this policy superseded
 
 
 # =========================================
@@ -164,6 +163,7 @@ replaced: [<preference_id>]   # optional engine provenance: ids this policy supe
 
 # Replacing a policy (create with `replaces`):
 # - rewires referrers to the new id, then archives the replaced policy
+# - reports replaced ids to the reflection agent as operation feedback only
 # - ids are immutable; replacement is how a policy gets a new identity
 
 

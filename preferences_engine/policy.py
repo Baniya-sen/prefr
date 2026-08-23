@@ -13,7 +13,7 @@ Field ownership (the rule the whole engine enforces here):
     ENGINE-OWNED   — id (immutable), confidence (derived from evidence),
         evidence counts (derived), representative_observations + summary
         (engine-maintained), created_by / created_at / updated_at /
-        last_reviewed / replaced (provenance).
+        last_reviewed (provenance).
 
 The model never sets engine-owned fields; anything it tries to set there is
 silently ignored.
@@ -459,10 +459,12 @@ def create_new_policies(request: ResultPolicies) -> ResultPolicies:
             _rewire_references(old_id, policy_id)
             _archive_one(old_id, reason=f"replaced by {policy_id}")
             replaced.append(old_id)
+        # Replacement is operation feedback, not persistent successor metadata.
+        response = dict(policy)
         if replaced:
-            policy["replaced"] = replaced
+            response["replaced"] = replaced
 
         _save_policy(policy)
-        result.append(policy)
+        result.append(response)
 
     return result
