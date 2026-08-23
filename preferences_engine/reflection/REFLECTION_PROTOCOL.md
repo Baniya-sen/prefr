@@ -82,7 +82,7 @@ Example:
   ]
 }
 
-An existing policy ID may be changed when there is a justified reason to improve its identity. IDs must remain globally unique.
+Policy IDs are immutable — `id` locates the policy and is never changed. To give a policy a better identity, create a new policy with a `replaces` entry naming the old id; the engine rewires references and archives the old policy automatically.
 
 Do not provide fields that do not need to change.
 
@@ -106,6 +106,9 @@ Optional fields:
 - `exceptions`
 - `related`
 - `evidence`
+- `replaces` — list of existing policy ids this new policy supersedes (engine rewires references and archives them)
+
+Set `priority` by judgment (importance), not by counting evidence: 85-95 core identity, 70-85 strong, 50-70 situational, 30-50 weak/experimental. Confidence is engine-derived; do not set it.
 
 Example:
 
@@ -129,7 +132,7 @@ Example:
   ]
 }
 
-Evidence observations identify conversation evidence. Do not calculate confidence or evidence counts yourself. The policy engine derives those values.
+Evidence observations identify conversation evidence. Observation IDs use the form `session_id:turn_index` — the `[N]` markers shown in the transcript (e.g. `abc123:3`). Do not calculate confidence or evidence counts yourself. The policy engine derives those values.
 
 System-owned metadata such as confidence, evidence counts, timestamps, and creation source is handled by the policy engine.
 

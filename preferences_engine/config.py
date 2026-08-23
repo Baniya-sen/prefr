@@ -75,6 +75,7 @@ REQUEST_TIMEOUT = 8
 ROOT = Path(__file__).parent
 
 POLICIES = ROOT / "policies"
+ARCHIVE_DIR = POLICIES / "archive"
 RUNTIME_DIR = ROOT / "runtime"
 SESSION_DIR = ROOT / "session"
 CLASSIFICATION_DIR = ROOT / "classification"

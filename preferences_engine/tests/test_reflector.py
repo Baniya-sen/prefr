@@ -108,8 +108,8 @@ class TestRenderTranscript(_Base):
             {"role": "assistant", "content": "hi there"},
         ]
         out = self.reflector._render_transcript(history)
-        self.assertIn("USER: hello", out)
-        self.assertIn("ASSISTANT: hi there", out)
+        self.assertIn("[0] USER: hello", out)
+        self.assertIn("[1] ASSISTANT: hi there", out)
         self.assertIn("End of current conversation.", out)
 
     def test_multimodal_content_normalized(self):
@@ -123,7 +123,7 @@ class TestRenderTranscript(_Base):
             },
         ]
         out = self.reflector._render_transcript(history)
-        self.assertIn("USER: see this image", out)
+        self.assertIn("[0] USER: see this image", out)
         self.assertNotIn("image_url", out)
 
     def test_skips_tool_and_system(self):
@@ -135,12 +135,12 @@ class TestRenderTranscript(_Base):
         out = self.reflector._render_transcript(history)
         self.assertNotIn("sys prompt", out)
         self.assertNotIn("tool result", out)
-        self.assertIn("USER: hi", out)
+        self.assertIn("[0] USER: hi", out)
 
     def test_non_dict_turn_skipped(self):
         history = [{"role": "user", "content": "hi"}, "garbage", 42, None]
         out = self.reflector._render_transcript(history)
-        self.assertIn("USER: hi", out)
+        self.assertIn("[0] USER: hi", out)
 
 
 class TestDialogueToBlocks(_Base):
@@ -201,7 +201,8 @@ class TestReflectionLoop(_Base):
         self.assertIn("local_first", turn2)
         # The system prompt carries the frozen prompt + the transcript.
         self.assertIn("<REFLECTION_PROMPT>", llm.calls[0]["system_prompt"])
-        self.assertIn("prefer cheap stuff", llm.calls[0]["system_prompt"])
+        self.assertIn("[0] USER: prefer cheap stuff", llm.calls[0]["system_prompt"])
+        self.assertIn('"s1:<turn_index>"', llm.calls[0]["system_prompt"])
 
     def test_view_then_update_then_exit(self):
         ctx, llm = _ctx(

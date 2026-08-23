@@ -128,16 +128,18 @@ related:
 # =========================================
 
 evidence:
-  positive: <integer>
-  negative: <integer>
-  representative_observations:
+  positive_observations:
+    - <obs_id>       # "session_id:turn_index" — source of truth
+  negative_observations:
     - <obs_id>
-  summary: <string>
+  representative_observations:
+    - <obs_id>       # engine copy of positive observations (audit)
+  summary: <string>  # engine-written note
 
 # Rules:
-# - positive >= 0
-# - negative >= 0
-# - confidence MUST be derived from these values
+# - observation-id lists are the SINGLE source of truth
+# - positive / negative counts and confidence are DERIVED from them (never stored)
+# - merging observation ids is a UNION — re-sending an id never double-counts
 
 
 # =========================================
@@ -148,6 +150,21 @@ created_by: manual | reflection
 created_at: YYYY-MM-DD
 updated_at: YYYY-MM-DD
 last_reviewed: YYYY-MM-DD
+replaced: [<preference_id>]   # optional engine provenance: ids this policy superseded
+
+
+# =========================================
+# ARCHIVE & REPLACEMENT
+# =========================================
+
+# Archiving a policy:
+# - moves {id}.yaml into policies/archive/{id}.{date}.yaml (never hard-deleted)
+# - scrubs the id from every other policy's related/exceptions
+# - records provenance: archived_at, archived_by, referenced_by (who linked it)
+
+# Replacing a policy (create with `replaces`):
+# - rewires referrers to the new id, then archives the replaced policy
+# - ids are immutable; replacement is how a policy gets a new identity
 
 
 # =========================================
@@ -195,25 +212,28 @@ last_reviewed: YYYY-MM-DD
 
 # confidence = (positive + 1) / (positive + negative + 2)
 
+# where positive = len(positive_observations), negative = len(negative_observations).
+# This is the posterior mean of a Beta(1,1) prior — a uniform prior, so a
+# policy with no evidence starts at 0.5 (agnostic).
+
 # Properties:
 # - stable for low data
 # - prevents division by zero
 # - naturally balances conflicting evidence
+# - never 0 or 1 (a single observation cannot over-confirm)
 
 
 # =========================================
 # DEFAULT VALUES
 # =========================================
 
-# For manual policies:
-# confidence = 0.7 (initial)
-
-# For reflection-created policies:
-# confidence = 0.5 (initial)
+# Confidence is always derived from evidence — there is no seed.
+# A policy with no observations has confidence 0.5 (uniform prior),
+# regardless of origin (manual or reflection).
 
 # If no evidence:
-# positive = 0
-# negative = 0
+# positive_observations = []
+# negative_observations = []
 
 
 # =========================================
