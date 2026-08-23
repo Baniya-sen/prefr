@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import contextvars
 import logging
 import threading
+import contextvars
 from typing import Any
 
 from preferences_engine.config import INJECTION_WINDOW
@@ -11,8 +11,8 @@ from preferences_engine.classifier import classify
 from preferences_engine.engine import PreferencesEngine
 from preferences_engine.evaluator import PreferenceEvaluator
 from preferences_engine.formatter import PreferenceFormatter
+from preferences_engine.reflector import PreferenceReflector
 from preferences_engine.prompt import get_prompt
-from preferences_engine.reflector import Reflector
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class PreferencePipeline:
         self.engine = PreferencesEngine()
         self.evaluator = PreferenceEvaluator()
         self.formatter = PreferenceFormatter()
-        self.reflector = Reflector()
+        self.reflector = PreferenceReflector()
         # Single-flight guard: at most one background reflection pass at a time.
         self._reflection_lock = threading.Lock()
 

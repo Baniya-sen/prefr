@@ -9,7 +9,7 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from preferences_engine.reflector import Reflector, OperationMethod
+from preferences_engine.reflector import PreferenceReflector, OperationMethod
 from preferences_engine.session import Session
 
 
@@ -46,7 +46,7 @@ class _Base(unittest.TestCase):
         )
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.reflector = Reflector()
+        self.reflector = PreferenceReflector()
 
 
 class TestParseAgentsChoice(_Base):

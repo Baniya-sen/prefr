@@ -43,7 +43,7 @@ class Operation:
     reason: str = ""
 
 
-class Reflector:
+class PreferenceReflector:
     def __init__(self):
         self._session: Session | None = None
         self._cooldown = 0
