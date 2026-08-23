@@ -41,7 +41,7 @@ class TestEvaluateSoftwareDomain(unittest.TestCase):
         )
         self.assertEqual(
             [p["weight"] for p in res],
-            ["HIGH", "HIGH", "HIGH", "MEDIUM"],
+            ["HIGH", "MEDIUM", "MEDIUM", "MEDIUM"],
         )
 
 
@@ -64,19 +64,45 @@ class TestComputeScore(unittest.TestCase):
     def setUp(self):
         self.ev = PreferenceEvaluator()
 
-    def test_priority_plus_confidence_times_100(self):
-        policy = {"priority": 90, "confidence": 0.7, "primary_domain": "software"}
-        # 90 + 0.7*100 = 160; primary_domain not in {infrastructure} -> no bonus.
-        self.assertEqual(self.ev._compute_score(policy, {"infrastructure"}), 160.0)
+    def test_score_uses_derived_confidence(self):
+        policy = {
+            "priority": 90,
+            "primary_domain": "software",
+            "evidence": {
+                "positive_observations": ["a", "b"],
+                "negative_observations": [],
+            },
+        }
+        # confidence = (2+1)/(2+0+2) = 0.75; 90 + 75 = 165, no domain bonus.
+        self.assertEqual(self.ev._compute_score(policy, {"infrastructure"}), 165.0)
+
+    def test_no_evidence_defaults_to_uniform_prior(self):
+        policy = {"priority": 90, "primary_domain": "software"}
+        # confidence = 0.5 (uniform prior); 90 + 50 = 140.
+        self.assertEqual(self.ev._compute_score(policy, {"infrastructure"}), 140.0)
 
     def test_primary_domain_bonus(self):
-        policy = {"priority": 90, "confidence": 0.7, "primary_domain": "software"}
-        # 90 + 70 + 20 = 180 when primary_domain in domains.
-        self.assertEqual(self.ev._compute_score(policy, {"software"}), 180.0)
+        policy = {
+            "priority": 90,
+            "primary_domain": "software",
+            "evidence": {
+                "positive_observations": ["a", "b"],
+                "negative_observations": [],
+            },
+        }
+        # confidence = 0.75; 90 + 75 + 20 = 185 when primary_domain in domains.
+        self.assertEqual(self.ev._compute_score(policy, {"software"}), 185.0)
 
     def test_no_primary_domain(self):
-        policy = {"priority": 80, "confidence": 0.7}
-        self.assertEqual(self.ev._compute_score(policy, {"software"}), 150.0)
+        policy = {
+            "priority": 80,
+            "evidence": {
+                "positive_observations": ["a", "b"],
+                "negative_observations": [],
+            },
+        }
+        # confidence = 0.75; 80 + 75 = 155.
+        self.assertEqual(self.ev._compute_score(policy, {"software"}), 155.0)
 
 
 class TestMaxPreferencesCap(unittest.TestCase):

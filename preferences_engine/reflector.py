@@ -46,7 +46,6 @@ class Operation:
 class Reflector:
     def __init__(self):
         self._session: Session | None = None
-        self._turn_count = 0
         self._cooldown = 0
 
         self._get_prompt()
@@ -70,17 +69,22 @@ class Reflector:
         self._get_prompt(session.session_id)
 
         main_chat_history: AgentInputType = kwargs.get("conversation_history")
-        if not main_chat_history or len(main_chat_history) < self._turn_count:
+        if not main_chat_history:
             return
 
         history_transcript = self._render_transcript(main_chat_history)
+        system_prompt_and_history = (
+            self._system_prompt
+            + self._evidence_anchor(session.session_id)
+            + history_transcript
+        )
         agent_turns: AgentInputType = []
 
         for _ in range(MAX_REFLECTION_STEPS):
             input_blocks = self._dialogue_to_blocks(agent_turns)
             agent_choice = self._call_reflection_agent(
                 ctx,
-                self._system_prompt + history_transcript,
+                system_prompt_and_history,
                 input_blocks,
                 classifier_provider,
                 classifier_model,
@@ -110,6 +114,7 @@ class Reflector:
     def _render_transcript(self, conversation_history: AgentInputType) -> str:
         header = "\n\nCONVERSATION TRANSCRIPT:\n\n"
         content = ""
+        index = 0
 
         for turn in conversation_history:
             if not isinstance(turn, dict):
@@ -118,9 +123,21 @@ class Reflector:
             if active not in ("user", "assistant"):
                 continue
             label = "USER" if active == "user" else "ASSISTANT"
-            content += f"{label}: {self._content_to_text(turn.get('content'))}\n"
+            text = self._content_to_text(turn.get("content"))
+            content += f"[{index}] {label}: {text}\n"
+            index += 1
 
         return header + content + "\n\n" + "End of current conversation."
+
+    def _evidence_anchor(self, session_id: str | None) -> str:
+        """Tell the agent how to cite evidence: ``session_id:turn_index``."""
+        sid = session_id or "unknown-session"
+        return (
+            "\n\nOBSERVATION IDS:\n"
+            f"Cite evidence with the observation id \"{sid}:<turn_index>\", "
+            "where <turn_index> is the [N] number shown on the transcript line. "
+            f"This session's id is \"{sid}\".\n"
+        )
 
     def _content_to_text(self, content: Any) -> str:
         """Normalize a message content (str or multimodal block list) to text."""

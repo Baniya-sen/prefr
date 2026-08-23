@@ -1,19 +1,17 @@
 id: low_cost
 title: Prefer low-cost solutions
-body: 'Prefer solutions that minimize cost, including upfront and recurring expenses,
-  unless higher cost provides clear and necessary value.'
+body: 'Prefer solutions that minimize cost, including upfront and recurring expenses, unless higher cost provides clear and necessary value.'
 primary_domain: software
 applies_to:
 - software
 - infrastructure
 - services
 priority: 85
-confidence: 0.7
 related:
 - low_maintenance
 evidence:
-  positive: 0
-  negative: 0
+  positive_observations: []
+  negative_observations: []
   representative_observations: []
   summary: 'Initial policy based on consistent preference for minimizing expenses.'
 created_by: manual

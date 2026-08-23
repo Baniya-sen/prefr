@@ -4,13 +4,7 @@
   "properties": {
     "method": {
       "type": "string",
-      "enum": [
-        "view",
-        "update",
-        "archive",
-        "create",
-        "exit"
-      ],
+      "enum": ["view", "update", "archive", "create", "exit"],
       "description": "The operation to perform. Use view to inspect current policies, update to modify existing policies, archive to retire policies, create to add new policies, and exit when reflection is complete."
     },
     "reason": {
@@ -26,7 +20,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "The policy identifier. For update, view, and archive this identifies the existing policy. For create, this is the new unique policy identifier. For update, the identifier may also be changed when the policy's identity should be improved; the resulting identifier must remain globally unique."
+            "description": "The policy identifier. For view, update, and archive this identifies the existing policy. For create, this is the new unique policy identifier (snake_case). Ids are immutable once created — to supersede a policy under a new id, create the new policy with a `replaces` entry naming the old id."
           },
           "title": {
             "type": "string",
@@ -44,7 +38,7 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 100,
-            "description": "How strongly the preference defines the user's decision style. Change only when evidence supports a different importance."
+            "description": "How strongly the preference defines the user's decision style (its importance). Set by judgment, not by counting evidence: 85-95 core identity, 70-85 strong, 50-70 situational, 30-50 weak/experimental. Change only when the preference's importance is reclassified."
           },
           "applies_to": {
             "type": "array",
@@ -72,6 +66,13 @@
             },
             "description": "IDs of preferences with similar or overlapping decision intent. This is a non-hierarchical relationship used for grouping and deduplication."
           },
+          "replaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Create only: IDs of existing policies this new policy supersedes. The engine rewires references to the new id and archives the replaced policies automatically. Optional."
+          },
           "evidence": {
             "type": "object",
             "additionalProperties": false,
@@ -81,21 +82,21 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Observation IDs that provide positive evidence for this preference."
+                "description": "Observation IDs (in \"session_id:turn_index\" form, matching the [N] markers in the transcript) that provide positive evidence for this preference."
               },
               "negative_observations": {
                 "type": "array",
                 "items": {
                   "type": "string"
                 },
-                "description": "Observation IDs that provide negative or contradictory evidence for this preference."
+                "description": "Observation IDs (in \"session_id:turn_index\" form) that provide negative or contradictory evidence for this preference."
               }
             },
             "required": [
               "positive_observations",
               "negative_observations"
             ],
-            "description": "New evidence observations associated with the policy. Evidence counts and confidence are derived by the policy engine."
+            "description": "New evidence observations associated with the policy. Evidence counts and confidence are derived by the policy engine — never set them yourself."
           }
         }
       }

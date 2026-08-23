@@ -7,6 +7,7 @@ from typing import Any
 import yaml  # pip install pyyaml
 
 from preferences_engine.config import POLICIES
+from preferences_engine.evidence import policy_confidence
 
 MAX_PREFERENCES = 6
 MIN_SCORE = 60
@@ -45,7 +46,7 @@ class PreferenceEvaluator:
 
     def _compute_score(self, policy: dict[str, Any], domains: set[str]) -> float:
         priority = float(policy.get("priority", 0))
-        confidence = float(policy.get("confidence", 0.0))
+        confidence = policy_confidence(policy)
         score = priority + (confidence * 100)
 
         # Primary domain bonus: +20 if policy is specifically targeted

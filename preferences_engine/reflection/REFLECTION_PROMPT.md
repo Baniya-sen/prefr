@@ -28,13 +28,16 @@ Do not persist:
 
 An explicit long-term statement counts even once. Repeated statements, corrections, or behavior expressing the same intent strengthen a preference. Do not create or strengthen from assumptions, incidental behavior, or temporary circumstances. A weak but plausible preference may be retained at low confidence and strengthened later.
 
+Cite evidence by observation id `session_id:turn_index` — the `[N]` number shown on the transcript line. Supply those ids in `evidence.positive_observations` / `negative_observations`; the engine derives counts and confidence from them.
+
 ## POLICY MAINTENANCE
 
 Review the existing library before creating anything. Use `view` when current policy contents are needed to judge overlap, contradiction, scope, or consolidation.
 
 - **Update** an existing policy only when the conversation actually changes or improves its meaning, scope, priority, or relationship. Before updating, `view` the policy, then confirm against the conversation that the change is supported. Topic overlap alone is not a change.
 - **Create** only for a genuinely distinct durable preference not covered by an existing policy.
-- **Archive** a policy when it is obsolete, superseded, or fully absorbed into another.
+- **Archive** a policy when it is obsolete, superseded, or fully absorbed into another. Archiving retires the policy and the engine removes it from other policies' `related`/`exceptions` automatically — no manual cleanup is needed.
+- To supersede a policy under a new id, create the new policy with a `replaces` list naming the old id(s); the engine rewires references and archives the old automatically. Never rename an id via `update` — ids are immutable.
 - **Merge** policies that are closely related and redundant — whether old+new, old+old, or new+new — when combining them produces a materially clearer, less redundant library. Do not merge merely because policies are related.
 
 **Naming.** Give each policy a concise `id` and `title` that capture its underlying intent in general, future-proof terms. Name it broad enough that future, closely-related preferences can be added under the same policy rather than spawning a new one.
@@ -51,7 +54,17 @@ Be strict with `applies_to` and `related`: name only domains and policies that g
 
 ## PRIORITY AND CONFIDENCE
 
-Priority = how strongly the preference should shape decisions. Confidence = how certain you are that it is correct. Change neither merely because a preference was noticed.
+These are two different questions — set each for its own reason.
+
+- `priority` = how strongly the preference should shape decisions (its importance). You set this, by judgment, not by counting evidence.
+- `confidence` = how certain the preference is correct. You never set this — the engine derives it from the evidence observation ids you supply.
+
+Set priority by judgment:
+- 85-95 core identity; 70-85 strong; 50-70 situational; 30-50 weak/experimental.
+- explicit ("I always want X") outranks inferred; general/durable outranks one-off.
+- a single explicit statement can be high priority and low confidence; a repeated incidental behavior can be high confidence and low priority.
+
+Do not change priority merely because a preference was noticed again. Evidence accumulates confidence automatically; never encode certainty into priority.
 
 ## REFLECTION LOOP
 
