@@ -173,16 +173,31 @@ class PreferenceReflector:
         per_turn_instruct = ("Review the conversation and maintain the policy library."
                              "Return exactly one operation (view/update/create/archive/exit).")
 
-        result = ctx.llm.complete_structured(
-            instructions=per_turn_instruct,
-            system_prompt=system_prompt_and_history,
-            json_mode=True,
-            input=agent_turn_msgs,
-            temperature=REFLECTOR_TEMPERATURE,
-            purpose=REFLECTOR_PURPOSE,
-            provider=classifier_provider,
-            model=classifier_model,
-        )
+        try:
+            result = ctx.llm.complete_structured(
+                instructions=per_turn_instruct,
+                system_prompt=system_prompt_and_history,
+                json_mode=True,
+                input=agent_turn_msgs,
+                temperature=REFLECTOR_TEMPERATURE,
+                purpose=REFLECTOR_PURPOSE,
+                provider=classifier_provider,
+                model=classifier_model,
+            )
+        except PermissionError:
+            logger.error(
+                "prefr reflection: trust gate denied override "
+                "(model=%s provider=%s)",
+                classifier_model, classifier_provider,
+            )
+            return ""
+        except Exception as e:
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            logger.error(
+                "prefr reflection: LLM call failed — %s status=%s: %s",
+                type(e).__name__, status, e,
+            )
+            return ""
 
         text = getattr(result, "text", None)
         return text if isinstance(text, str) else ""

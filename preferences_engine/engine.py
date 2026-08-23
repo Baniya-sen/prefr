@@ -9,16 +9,16 @@ about sessions. prompt.py builds/freezes the prompt; the pipeline passes it here
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
 from preferences_engine.config import (
-    LOG_FILE,
     MAX_TOKENS,
     REQUEST_TIMEOUT,
     TEMPERATURE,
     PURPOSE,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PreferencesEngine:
@@ -27,20 +27,11 @@ class PreferencesEngine:
             return
 
         self._init = True
-
-        Path(LOG_FILE).parent.mkdir(parents=True, exist_ok=True)
-
-        logging.basicConfig(
-            filename=LOG_FILE,
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(message)s",
-        )
-
         self.started = False
 
     def start(self):
         self.started = True
-        logging.info("Preferences Engine ready")
+        logger.info("Preferences Engine ready")
 
     def llm_completion(
         self,
@@ -64,15 +55,31 @@ class PreferencesEngine:
             input_blocks.append({"type": "text", "text": context})
         input_blocks.append({"type": "text", "text": user_messages[-1]})
 
-        return ctx.llm.complete_structured(
-            instructions="Classify the user message below.",
-            system_prompt=system_prompt,
-            json_mode=True,
-            input=input_blocks,
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-            purpose=PURPOSE,
-            provider=classifier_provider,
-            model=classifier_model,
-            timeout=REQUEST_TIMEOUT,
-        )
+        try:
+            return ctx.llm.complete_structured(
+                instructions="Classify the user message below.",
+                system_prompt=system_prompt,
+                json_mode=True,
+                input=input_blocks,
+                temperature=TEMPERATURE,
+                max_tokens=MAX_TOKENS,
+                purpose=PURPOSE,
+                provider=classifier_provider,
+                model=classifier_model,
+                timeout=REQUEST_TIMEOUT,
+            )
+        except PermissionError:
+            # PluginLlmTrustError — override gate closed.
+            logger.error(
+                "prefr classifier: trust gate denied override "
+                "(model=%s provider=%s)",
+                classifier_model, classifier_provider,
+            )
+            raise
+        except Exception as e:
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            logger.error(
+                "prefr classifier: LLM call failed — %s status=%s: %s",
+                type(e).__name__, status, e,
+            )
+            raise
