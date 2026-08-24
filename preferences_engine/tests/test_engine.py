@@ -1,9 +1,10 @@
 """Unit tests for prompt assembly and per-session prompt freezing (no LLM/network/ctx)."""
 
 import unittest
+from pathlib import Path
 
 from preferences_engine.prompt import build_prompt, _load_json, _render_registry, _render_schema
-from preferences_engine.config import DOMAINS, INTERACTION_MODES, SCHEMA
+from preferences_engine.config import DOMAINS, INTERACTION_MODES, REFLECTION_PROMPT, SCHEMA
 
 
 class TestBuildPrompt(unittest.TestCase):
@@ -28,6 +29,18 @@ class TestBuildPrompt(unittest.TestCase):
         self.assertIn("## INTERACTION MODES", out)
         self.assertIn("recommend", out)
         self.assertIn("troubleshoot", out)
+
+    def test_reflection_instructions_stay_compact_and_keep_core_gates(self):
+        text = Path(REFLECTION_PROMPT).read_text(encoding="utf-8")
+        self.assertLessEqual(len(text.split()), 600)
+        for rule in (
+            "Do not persist:",
+            "smallest set of independently useful",
+            "Before updating",
+            "Domains are routing contexts",
+            "create_domain",
+        ):
+            self.assertIn(rule, text)
 
 
 class TestEnumDerivation(unittest.TestCase):
