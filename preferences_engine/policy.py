@@ -52,6 +52,10 @@ _ID_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 # holds domain strings).
 _REFERENCE_FIELDS = ("related", "exceptions")
 
+# Domains are structural routing labels. They use the same stable, snake_case
+# identifier convention as policies.
+_DOMAIN_ID_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+
 
 def _today() -> str:
     return date.today().isoformat()
@@ -100,6 +104,32 @@ def _save_policy(policy: dict[str, Any]) -> None:
         yaml.safe_dump(policy, f, sort_keys=False, allow_unicode=True)
 
 
+def _load_domains() -> dict[str, dict[str, Any]] | None:
+    """Load the domain registry without treating a bad file as an empty one."""
+    try:
+        data = json.loads(Path(DOMAINS).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return {
+        domain_id: dict(meta)
+        for domain_id, meta in data.items()
+        if isinstance(domain_id, str) and isinstance(meta, dict)
+    }
+
+
+def _save_domains(domains: dict[str, dict[str, Any]]) -> None:
+    """Back up the structural registry before replacing it."""
+    path = Path(DOMAINS)
+    backup = path.with_name(f"{path.stem}.backup{path.suffix}")
+    backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+    path.write_text(
+        json.dumps(domains, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Field coercion (model input -> clean, engine-safe values)
 # ---------------------------------------------------------------------------
@@ -109,6 +139,11 @@ def _valid_domains() -> set[str]:
         return set(json.loads(Path(DOMAINS).read_text(encoding="utf-8")).keys())
     except Exception:
         return set()
+
+
+def _domain_description(item: dict[str, Any]) -> str:
+    value = item.get("description")
+    return value.strip() if isinstance(value, str) else ""
 
 
 def _dedup_ids(values: Any) -> list[str]:
@@ -467,4 +502,74 @@ def create_new_policies(request: ResultPolicies) -> ResultPolicies:
         _save_policy(policy)
         result.append(response)
 
+    return result
+
+
+def create_domains(request: ResultPolicies) -> ResultPolicies:
+    """Add durable routing domains to the registry, with a pre-write backup."""
+    domains = _load_domains()
+    if domains is None:
+        return [{"created": False, "error": "domain registry is unreadable"}]
+
+    result: ResultPolicies = []
+    seen: set[str] = set()
+    changed = False
+    for item in request:
+        if not isinstance(item, dict):
+            continue
+        domain_id = item.get("id")
+        if not isinstance(domain_id, str) or not domain_id.strip():
+            continue
+        domain_id = domain_id.strip()
+        if domain_id in seen:
+            continue
+        seen.add(domain_id)
+        description = _domain_description(item)
+        if not _DOMAIN_ID_RE.match(domain_id):
+            result.append({"id": domain_id, "created": False, "error": "id must be snake_case"})
+        elif domain_id in domains:
+            result.append({"id": domain_id, "created": False, "error": "id already exists"})
+        elif not description:
+            result.append({"id": domain_id, "created": False, "error": "description is required"})
+        else:
+            domains[domain_id] = {"description": description}
+            result.append({"id": domain_id, "created": True, "description": description})
+            changed = True
+
+    if changed:
+        _save_domains(domains)
+    return result
+
+
+def update_domains(request: ResultPolicies) -> ResultPolicies:
+    """Change only domain descriptions; domain ids remain immutable."""
+    domains = _load_domains()
+    if domains is None:
+        return [{"updated": False, "error": "domain registry is unreadable"}]
+
+    result: ResultPolicies = []
+    seen: set[str] = set()
+    changed = False
+    for item in request:
+        if not isinstance(item, dict):
+            continue
+        domain_id = item.get("id")
+        if not isinstance(domain_id, str) or not domain_id.strip():
+            continue
+        domain_id = domain_id.strip()
+        if domain_id in seen:
+            continue
+        seen.add(domain_id)
+        description = _domain_description(item)
+        if domain_id not in domains:
+            result.append({"id": domain_id, "found": False})
+        elif not description:
+            result.append({"id": domain_id, "updated": False, "error": "description is required"})
+        else:
+            domains[domain_id]["description"] = description
+            result.append({"id": domain_id, "updated": True, "description": description})
+            changed = True
+
+    if changed:
+        _save_domains(domains)
     return result

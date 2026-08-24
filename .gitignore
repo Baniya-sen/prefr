@@ -15,3 +15,6 @@ engine/
 
 # Session runtime state (auto-created by session.py)
 session/
+
+# Runtime safety backup created before reflection mutates domain registry
+preferences_engine/classification/domains.backup.json

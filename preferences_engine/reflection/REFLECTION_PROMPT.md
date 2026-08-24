@@ -32,6 +32,8 @@ Cite evidence by observation id `session_id:turn_index` — the `[N]` number sho
 
 ## POLICY MAINTENANCE
 
+Before creating policies, determine the smallest set of independently useful durable preferences supported by the conversation. A statement may contain several clauses. Keep them in one policy when they share a scope and jointly define one operating practice. Split only when each preference has a meaning, trigger, and future applicability that can stand independently. Do not split supporting procedures from the broader preference they implement.
+
 Review the existing library before creating anything. Use `view` when current policy contents are needed to judge overlap, contradiction, scope, or consolidation.
 
 - **Update** an existing policy only when the conversation actually changes or improves its meaning, scope, priority, or relationship. Before updating, `view` the policy, then confirm against the conversation that the change is supported. Topic overlap alone is not a change.
@@ -49,6 +51,8 @@ After an operation, treat the returned state as authoritative and continue revie
 ## SCOPE AND DOMAINS
 
 Distinguish a general preference from an instruction that belongs to one task, project, or situation.
+
+Domains are routing contexts, not loose topic labels. Choose a domain only when it is a genuine, predictable context in which the policy should apply. Do not assign a nearby domain merely because one clause mentions it. Create a narrowly named domain only when a distinct, recurring routing context is not represented by the supplied registry and adding it improves future policy selection. Do not create domains for one-off topics, keywords, or a single policy with no likely future use. Use `create_domain` to add one and `update_domain` only to improve its description; domain ids are immutable.
 
 Be strict with `applies_to` and `related`: name only domains and policies that genuinely apply. Never pad. Domain or applicability changes require strong evidence — do not change a domain merely because the current conversation happens to involve it.
 

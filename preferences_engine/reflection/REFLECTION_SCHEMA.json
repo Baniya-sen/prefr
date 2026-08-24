@@ -4,8 +4,8 @@
   "properties": {
     "method": {
       "type": "string",
-      "enum": ["view", "update", "archive", "create", "exit"],
-      "description": "The operation to perform. Use view to inspect current policies, update to modify existing policies, archive to retire policies, create to add new policies, and exit when reflection is complete."
+      "enum": ["view", "update", "archive", "create", "create_domain", "update_domain", "exit"],
+      "description": "The operation to perform. Use view to inspect current policies, update to modify existing policies, archive to retire policies, create to add new policies, create_domain to add a routing domain, update_domain to improve a domain description, and exit when reflection is complete."
     },
     "reason": {
       "type": "string",
@@ -33,6 +33,12 @@
             "minLength": 1,
             "maxLength": 500,
             "description": "The durable preference expressed as a concise, reusable imperative instruction. It must describe general decision intent rather than implementation details."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "description": "For create_domain and update_domain: concise description of the routing context."
           },
           "priority": {
             "type": "integer",

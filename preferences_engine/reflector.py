@@ -20,7 +20,9 @@ from preferences_engine.policy import (
     view_policies,
     update_policies,
     archive_policies,
-    create_new_policies
+    create_new_policies,
+    create_domains,
+    update_domains,
 )
 
 AgentInputType = list[dict[str, Any]]
@@ -33,6 +35,8 @@ class OperationMethod(StrEnum):
     UPDATE = "update"
     ARCHIVE = "archive"
     CREATE = "create"
+    CREATE_DOMAIN = "create_domain"
+    UPDATE_DOMAIN = "update_domain"
     EXIT = "exit"
 
 
@@ -171,7 +175,8 @@ class PreferenceReflector:
     ) -> str:
 
         per_turn_instruct = ("Review the conversation and maintain the policy library."
-                             "Return exactly one operation (view/update/create/archive/exit).")
+                             "Return exactly one operation (view/update/create/archive/"
+                             "create_domain/update_domain/exit).")
 
         try:
             result = ctx.llm.complete_structured(
@@ -244,6 +249,8 @@ class PreferenceReflector:
             OperationMethod.UPDATE: update_policies,
             OperationMethod.ARCHIVE: archive_policies,
             OperationMethod.CREATE: create_new_policies,
+            OperationMethod.CREATE_DOMAIN: create_domains,
+            OperationMethod.UPDATE_DOMAIN: update_domains,
         }
 
         return handlers[operation.method](operation.request)

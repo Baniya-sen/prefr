@@ -20,6 +20,8 @@ Supported operations:
 - `update` — modify existing policies.
 - `archive` — retire existing policies.
 - `create` — create new policies.
+- `create_domain` — add a new routing domain.
+- `update_domain` — improve an existing routing domain's description.
 - `exit` — finish the reflection process.
 
 The `request` value is always a list. Multiple policies may be handled in one operation.
@@ -135,6 +137,16 @@ Example:
 Evidence observations identify conversation evidence. Observation IDs use the form `session_id:turn_index` — the `[N]` markers shown in the transcript (e.g. `abc123:3`). Do not calculate confidence or evidence counts yourself. The policy engine derives those values.
 
 System-owned metadata such as confidence, evidence counts, timestamps, and creation source is handled by the policy engine.
+
+---
+
+## DOMAIN OPERATIONS
+
+Use `create_domain` only for a distinct, recurring routing context absent from the supplied registry. Each request requires a new snake_case `id` and a concise `description`. A domain is structural: the engine takes a backup before writing it.
+
+Use `update_domain` only to improve the description of an existing domain. Each request requires its immutable `id` and a replacement `description`.
+
+Do not use either operation for one-off topics, keywords, or merely to give a single policy a more convenient label.
 
 ---
 
