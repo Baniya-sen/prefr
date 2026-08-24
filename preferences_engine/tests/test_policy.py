@@ -6,6 +6,7 @@ modified; the reflection loop itself is separately covered in test_reflector.
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -22,10 +23,13 @@ class PolicyCorpusTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.policies = Path(self.tmp.name) / "policies"
         self.archive = self.policies / "archive"
+        self.domains = Path(self.tmp.name) / "domains.json"
+        self.domains.write_text('{"general": {"description": "fallback"}}', encoding="utf-8")
         self.policies.mkdir()
         self.patchers = [
             mock.patch.object(P, "POLICIES", self.policies),
             mock.patch.object(P, "ARCHIVE_DIR", self.archive),
+            mock.patch.object(P, "DOMAINS", self.domains),
             mock.patch.object(P, "_valid_domains", return_value={"software", "git", "general"}),
         ]
         for patcher in self.patchers:
@@ -202,6 +206,41 @@ class TestCreatePolicies(PolicyCorpusTest):
         self.assertIn("snake_case", results[0]["error"])
         self.assertFalse(results[1]["created"])
         self.assertEqual(results[1]["error"], "id already exists")
+
+
+class TestDomainRegistry(PolicyCorpusTest):
+    def test_create_domain_persists_description_and_backup(self):
+        out = P.create_domains([{
+            "id": "projects",
+            "description": "project setup, collaboration, context, and documentation",
+        }])
+
+        self.assertEqual(out, [{
+            "id": "projects",
+            "created": True,
+            "description": "project setup, collaboration, context, and documentation",
+        }])
+        registry = json.loads(self.domains.read_text(encoding="utf-8"))
+        self.assertEqual(registry["projects"]["description"], out[0]["description"])
+        backups = list(self.domains.parent.glob("domains.*.json"))
+        self.assertEqual(len(backups), 1)
+
+    def test_update_domain_changes_only_description(self):
+        self.domains.write_text(
+            '{"general": {"description": "fallback"}, "projects": {"description": "old"}}',
+            encoding="utf-8",
+        )
+
+        out = P.update_domains([{
+            "id": "projects",
+            "description": "project setup and collaboration",
+        }])
+
+        self.assertEqual(out[0]["updated"], True)
+        registry = json.loads(self.domains.read_text(encoding="utf-8"))
+        self.assertEqual(registry["projects"], {
+            "description": "project setup and collaboration",
+        })
 
 
 if __name__ == "__main__":

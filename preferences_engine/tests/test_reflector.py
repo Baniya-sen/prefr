@@ -57,6 +57,13 @@ class TestParseAgentsChoice(_Base):
         self.assertEqual(op.method, OperationMethod.VIEW)
         self.assertEqual(op.request, [{"id": "x"}])
 
+    def test_valid_create_domain(self):
+        op = self.reflector._parse_agents_choice(
+            '{"method": "create_domain", "request": [{"id": "projects", "description": "project work"}]}'
+        )
+        self.assertEqual(op.method, OperationMethod.CREATE_DOMAIN)
+        self.assertEqual(op.request[0]["id"], "projects")
+
     def test_exit(self):
         op = self.reflector._parse_agents_choice('{"method": "exit", "request": []}')
         self.assertEqual(op.method, OperationMethod.EXIT)
